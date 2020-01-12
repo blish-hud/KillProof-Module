@@ -75,6 +75,7 @@
   <ItemGroup>
     <Reference Include="Blish HUD">
       <HintPath>..\Blish-HUD\Blish HUD\bin\x64\Debug\Blish HUD.exe</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Costura, Version=4.1.0.0, Culture=neutral, PublicKeyToken=9919ef960d84173d, processorArchitecture=MSIL">
       <HintPath>packages\Costura.Fody.4.1.0\lib\net40\Costura.dll</HintPath>
