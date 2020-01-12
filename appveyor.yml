@@ -35,7 +35,7 @@ before_build:
 
     # Prepare Blish HUD.exe dependency
 
-    $blishHudPath = "C:\Blish-HUD\Blish HUD\bin\x64\Debug\"
+    $blishHudPath = "C:\projects\Blish-HUD\Blish HUD\bin\x64\Debug\"
 
 
     # Download latest Blish HUD artifact
