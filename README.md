@@ -19,6 +19,6 @@ Auto-Lookup Players in Party: https://gfycat.com/insidiouseagerfish & https://gf
 ### Setup
 
 - Download and launch Blish HUD ([#blish_releases](https://discord.gg/2HKg78n) channel on Discord).
-- Move the KillProof module to the Blish HUD modules directory (*see: [Manually Adding a Module](https://github.com/blish-hud/Blish-HUD/wiki/Manually-Adding-a-Module)*)
+- Download the module from [Releases](https://github.com/blish-hud/KillProof-Module/releases/) to the Blish HUD modules directory (*see: [Manually Adding a Module](https://github.com/blish-hud/Blish-HUD/wiki/Manually-Adding-a-Module)*)
 - (optional) Install the [ArcDPS addon for Blish HUD](https://github.com/blish-hud/arcdps-bhud).
 - Launch Blish HUD and enable the module in the settings.

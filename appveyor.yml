@@ -5,6 +5,9 @@ platform: x64
 environment:
   API_KEY:
     secure: kX2401UHha1RA2FkQXXCMAorfkR2VAU72ocHPxMsLuE=
+branches:
+  only:
+    - master
 install:
 - ps: >-
     # Visual C++ Redistributable for Content Pipeline
@@ -83,6 +86,7 @@ after_build:
     }
 deploy:
 - provider: GitHub
+  tag: v$(appveyor_build_version)
   release: KillProof Module v$(appveyor_build_version)
   auth_token:
     secure: zwWAJteWhyBGTAIIJ00g1YEuX4saBUurtfyQ7N4o7OI2K/gytaXxcPt53K7MLMEY
