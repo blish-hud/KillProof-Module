@@ -1,0 +1,27 @@
+{
+  "name": "KillProof Module",
+  "version": "1.3.0",
+  "namespace": "Nekres.KillProof",
+  "package": "KillProof Module.dll",
+  "manifest_version": 1,
+
+  "description": "Check someone's kills for raiding. Uses ArcDPS Bridge service if available.",
+  "dependencies": {
+    "bh.blishhud": ">=0.4.4"
+  },
+  "url": "https://killproof.me/",
+  "author": {
+    "name": "Andy",
+    "username": "Nekres.1038"
+  },
+  "contributors": [
+    {
+      "name": "Leaky",
+      "username": "Leaky.1472"
+    },
+    {
+      "name": "Jaq",
+      "username": "Jaq.6829"
+    }
+  ]
+}
