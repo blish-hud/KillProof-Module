@@ -1,6 +1,6 @@
 # KillProof Module
 
-This is a maintained fork of the [KillProof module](https://github.com/TybaIt/Community-Module-Pack/tree/module-killproof) originally written by Nekres (Tybalt).
+This is a maintained fork of the [KillProof module](https://github.com/TybaIt/Community-Module-Pack/tree/module-killproof) originally written by Nekres ([Tybalt](https://github.com/TybaIt)).
 
 ---
 
