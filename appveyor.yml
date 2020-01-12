@@ -1,0 +1,90 @@
+version: 1.3.{build}
+image: Visual Studio 2019
+configuration: Release
+platform: x64
+environment:
+  API_KEY:
+    secure: kX2401UHha1RA2FkQXXCMAorfkR2VAU72ocHPxMsLuE=
+install:
+- ps: >-
+    # Visual C++ Redistributable for Content Pipeline
+
+    choco install vcredist2012
+
+
+    # Install MonoGame
+
+    (New-Object Net.WebClient).DownloadFile('https://github.com/MonoGame/MonoGame/releases/download/v3.7.1/MonoGameSetup.exe', 'C:\MonoGameSetup.exe')
+
+    Invoke-Command -ScriptBlock {C:\MonoGameSetup.exe /S /v/qn}
+
+
+    # Restore NuGet Packages
+
+    nuget restore
+before_build:
+- ps: >-
+    # Prepare module destination
+
+    $docs = [Environment]::GetFolderPath("MyDocuments")
+
+    $modulesDest = "$($docs)\Guild Wars 2\addons\blishhud\modules"
+
+    New-Item -Type dir "$modulesDest"
+
+
+    # Prepare Blish HUD.exe dependency
+
+    $blishHudPath = "C:\Blish-HUD\Blish HUD\bin\x64\Debug\"
+
+
+    # Download latest Blish HUD artifact
+
+    $headers = @{}
+
+    $headers['Authorization'] = "Bearer $env:API_KEY"
+
+    $headers["Content-type"] = "application/json"
+
+
+    $project = Invoke-RestMethod -Uri 'https://ci.appveyor.com/api/projects/dlamkins/blish-hud/' -Headers $headers -Method Get
+
+    $jobId = $project.build.jobs[0].jobId
+
+    $artifacts = Invoke-RestMethod -Method Get -Uri "https://ci.appveyor.com/api/buildjobs/$jobId/artifacts" -Headers $headers
+
+    $artifact = ($artifacts | Where { $_.type -eq "Zip" })[0]
+
+
+    $downloadUrl = "https://ci.appveyor.com/api/buildjobs/$jobId/artifacts/$($artifact.fileName)"
+
+
+    $downloadPath = "c:\blishhud.zip"
+
+
+    Invoke-WebRequest $downloadUrl -OutFile $downloadPath
+
+
+    &"7z" @("x", "$downloadPath", "-o$blishHudPath")
+build:
+  project: KillProof Module.sln
+  verbosity: normal
+after_build:
+- ps: >-
+    $docs = [Environment]::GetFolderPath("MyDocuments")
+
+    $modulesDest = "$($docs)\Guild Wars 2\addons\blishhud\modules"
+
+
+    Get-ChildItem $modulesDest | ForEach-Object {
+
+    Push-AppveyorArtifact $_.FullName
+
+    }
+deploy:
+- provider: GitHub
+  auth_token:
+    secure: zwWAJteWhyBGTAIIJ00g1YEuX4saBUurtfyQ7N4o7OI2K/gytaXxcPt53K7MLMEY
+  repository: blish-hud/KillProof-Module
+  artifact: KillProof.bhm
+  draft: true
