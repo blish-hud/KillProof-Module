@@ -13,16 +13,6 @@ namespace Nekres.KillProof.Controls {
 
         private const int ICON_SIZE = 64;
 
-        #region Load Static
-
-        private static readonly Texture2D _textureBackground;
-
-        static PlayerNotification() {
-            _textureBackground = KillProofModule.ModuleInstance.ContentsManager.GetTexture(@"ns-button.png");
-        }
-
-        #endregion
-
         private readonly AsyncTexture2D _icon;
 
         private static int _visibleNotifications = 0;
@@ -79,7 +69,7 @@ namespace Nekres.KillProof.Controls {
 
         public override void PaintBeforeChildren(SpriteBatch spriteBatch, Rectangle bounds) {
             spriteBatch.DrawOnCtrl(this,
-                                   _textureBackground,
+                                   KillProofModule.ModuleInstance._notificationBackroundTexture,
                                    bounds,
                                    Color.White * 0.85f);
 

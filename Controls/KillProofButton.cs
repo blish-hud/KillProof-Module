@@ -45,7 +45,7 @@ namespace Nekres.KillProof.Controls {
         }
 
         public KillProofButton() {
-            this.ICON_TITLE = ICON_TITLE ?? KillProofModule.ModuleInstance.ContentsManager.GetTexture("icon_title.png");
+            this.ICON_TITLE = ICON_TITLE ?? KillProofModule.ModuleInstance._sortByTitleTexture;
             this.BORDER_SPRITE = BORDER_SPRITE ?? Content.GetTexture(@"controls\detailsbutton\605003");
             this.SEPARATOR = SEPARATOR ?? Content.GetTexture("157218");
             this.PIXEL = PIXEL ?? ContentService.Textures.Pixel;

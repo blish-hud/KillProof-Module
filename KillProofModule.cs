@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Net;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Blish_HUD;
@@ -36,7 +39,6 @@ namespace Nekres.KillProof {
         internal Gw2ApiManager Gw2ApiManager => this.ModuleParameters.Gw2ApiManager;
         #endregion
 
-        private       Texture2D ICON;
         private const int       TOP_MARGIN    = 0;
         private const int       RIGHT_MARGIN  = 5;
         private const int       BOTTOM_MARGIN = 10;
@@ -74,15 +76,44 @@ namespace Nekres.KillProof {
         private Queue<PlayerButton>   DisplayedPlayers;
         private List<KillProofButton> DisplayedKillProofs;
 
+        #region Cached Textures
+
+        internal Texture2D _killProofIconTexture;
+        internal Texture2D _killProofMeLogoTexture;
+
+        internal Texture2D _deletedItemTexture;
+
+        internal Texture2D _sortByWorldBossesTexture;
+        internal Texture2D _sortByTokenTexture;
+        internal Texture2D _sortByTitleTexture;
+        internal Texture2D _sortByRaidTexture;
+        internal Texture2D _sortByFractalTexture;
+
+        internal Texture2D _notificationBackroundTexture;
+
+        #endregion
+
         [ImportingConstructor]
         public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
 
-        protected override void DefineSettings(SettingCollection settings) {
+        protected override void DefineSettings(SettingCollection settings) { /* NOOP */ }
 
+        private void LoadTextures() {
+            _killProofIconTexture   = ContentsManager.GetTexture("killproof_icon.png");
+            _killProofMeLogoTexture = ContentsManager.GetTexture("killproof_logo.png");
+
+            _deletedItemTexture = ContentsManager.GetTexture("deleted_item.png");
+
+            _sortByWorldBossesTexture = ContentsManager.GetTexture("world-bosses.png");
+            _sortByTokenTexture       = ContentsManager.GetTexture("icon_token.png");
+            _sortByTitleTexture       = ContentsManager.GetTexture("icon_title.png");
+            _sortByRaidTexture        = ContentsManager.GetTexture("icon_raid.png");
+            _sortByFractalTexture     = ContentsManager.GetTexture("icon_fractal.png");
+
+            _notificationBackroundTexture = ContentsManager.GetTexture("ns-button.png");
         }
 
         protected override void Initialize() {
-            ICON                       = ICON ?? ContentsManager.GetTexture("killproof_icon.png");
             TokenRenderRepository      = new Dictionary<string, AsyncTexture2D>(StringComparer.InvariantCultureIgnoreCase);
             EliteRenderRepository      = new Dictionary<uint, AsyncTexture2D>();
             ProfessionRenderRepository = new Dictionary<uint, AsyncTexture2D>();
@@ -90,27 +121,23 @@ namespace Nekres.KillProof {
             DisplayedPlayers           = new Queue<PlayerButton>();
             CachedKillProofs           = new List<KillProof>();
 
+            LoadTextures();
+
             GameService.ArcDps.Common.Activate();
         }
 
         protected override async Task LoadAsync() {
-            try {
-                var rawJson = await (KILLPROOF_API_URL + "icons")
-                                   .AllowAnyHttpStatus()
-                                   .GetStringAsync();
+            (bool responseSuccess, Dictionary<string, Url> tokenRenderUrlRepository) = await GetJsonResponse<Dictionary<string, Url>>(KILLPROOF_API_URL + "icons");
 
-                Dictionary<string, Url> tokenRenderUrlRepository = JsonConvert.DeserializeObject<Dictionary<string, Url>>(rawJson);
-
+            if (responseSuccess) {
                 foreach (KeyValuePair<string, Url> token in tokenRenderUrlRepository) {
                     TokenRenderRepository.Add(token.Key, GameService.Content.GetRenderServiceTexture(token.Value));
                 }
-            } catch (FlurlHttpException ex) {
-                Logger.Warn(ex.Message);
             }
         }
 
         protected override void OnModuleLoaded(EventArgs e) {
-            KillProofTab                          =  GameService.Overlay.BlishHudWindow.AddTab("KillProof", ICON, BuildHomePanel(GameService.Overlay.BlishHudWindow), 0);
+            KillProofTab                          =  GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture, BuildHomePanel(GameService.Overlay.BlishHudWindow), 0);
             GameService.ArcDps.Common.PlayerAdded += PlayerAddedEvent;
 
             // Base handler must be called
@@ -124,50 +151,80 @@ namespace Nekres.KillProof {
             }
         }
 
+        private async Task<(bool, T)> GetJsonResponse<T>(string request) {
+            try {
+                string rawJson = await request.AllowHttpStatus(HttpStatusCode.NotFound).GetStringAsync();
+
+                return (true, JsonConvert.DeserializeObject<T>(rawJson));
+            } catch (FlurlHttpTimeoutException ex) {
+                Logger.Warn(ex, $"Request '{request}' timed out.");
+            } catch (FlurlHttpException ex) {
+                Logger.Warn(ex, $"Request '{request}' was not successful.");
+            } catch (JsonReaderException ex) {
+                Logger.Warn(ex, $"Failed to read JSON response returned by request '{request}' which returned ''");
+            } catch (Exception ex) {
+                Logger.Error(ex, $"Unexpected error while requesting '{request}'.");
+            }
+
+            return (false, default);
+        }
+
         #region Module Logic
 
-        private async Task<bool> CheckForUpdate() {
-            try {
-                var rawJson = await ("https://raw.githubusercontent.com/TybaIt/Community-Module-Pack/module-killproof/Kill%20Proof%20Module/manifest.json")
-                                   .AllowAnyHttpStatus()
-                                   .GetStringAsync();
-                JObject jObject = JObject.Parse(rawJson);
-                string  version = (string)jObject.SelectToken("version");
-                return ModuleInstance.Version.Equals(new SemVer.Version(version));
-            } catch (FlurlHttpException ex) {
-                Logger.Warn(ex.Message);
-                return false;
+        private async Task<bool> IsLatestVersion() {
+            (bool responseSuccess, var remoteManifest) = await GetJsonResponse<Manifest>("https://raw.githubusercontent.com/TybaIt/Community-Module-Pack/module-killproof/Kill%20Proof%20Module/manifest.json");
+
+            if (responseSuccess) {
+                if (ModuleInstance.Version >= remoteManifest.Version) {
+                    return true;
+                } else {
+                    Logger.Warn($"A new version of the KillProof module was found: '{remoteManifest.Version.Clean()}'.");
+                }
+            } else {
+                Logger.Info("Failed to check for new version.");
             }
+
+            return false;
         }
 
         #region Render Getters
+
+        private class ProfessionRender {
+
+            [JsonProperty("icon_big")]
+            public string ProfessionIconUrl;
+
+        }
 
         private async Task<AsyncTexture2D> GetProfessionRender(CommonFields.Player player) {
             if (ProfessionRenderRepository.Any(x => x.Key.Equals(player.Profession))) {
                 return ProfessionRenderRepository[player.Profession];
             } else {
-                try {
-                    if (ProfessionRepository == null) {
-                        var professionsJson = await ("https://api.guildwars2.com/v2/professions")
-                                                   .AllowAnyHttpStatus()
-                                                   .GetStringAsync();
-                        ProfessionRepository = JsonConvert.DeserializeObject<string[]>(professionsJson);
+                (bool profResponseSuccess, string[] professions) = await GetJsonResponse<string[]>("https://api.guildwars2.com/v2/professions");
+
+                if (profResponseSuccess) {
+                    ProfessionRepository = professions;
+
+                    (bool responseSuccess, ProfessionRender pRender) = await GetJsonResponse<ProfessionRender>("https://api.guildwars2.com/v2/professions/" + ProfessionRepository[(int) player.Profession - 1]);
+
+                    if (responseSuccess) {
+                        var render = GameService.Content.GetRenderServiceTexture(pRender.ProfessionIconUrl);
+                        ProfessionRenderRepository.Add(player.Profession, render);
+
+                        return render;
                     }
-
-                    var rawJson = await ("https://api.guildwars2.com/v2/professions/" + ProfessionRepository[(int)player.Profession - 1])
-                                       .AllowAnyHttpStatus()
-                                       .GetStringAsync();
-                    JObject        jObject   = JObject.Parse(rawJson);
-                    Url            renderUrl = (string)jObject.SelectToken("icon_big");
-                    AsyncTexture2D render    = GameService.Content.GetRenderServiceTexture(renderUrl);
-                    ProfessionRenderRepository.Add(player.Profession, render);
-
-                    return render;
-                } catch (FlurlHttpException ex) {
-                    Logger.Warn(ex.Message);
-                    return GameService.Content.GetTexture("733268");
                 }
+
+                return GameService.Content.GetTexture("733268");
             }
+        }
+
+        // TODO: Switch to Gw2Sharp to avoid deserialization workaround
+        private class EliteSpecializationRender {
+
+            [JsonProperty("profession_icon_big")]
+            public string ProfessionIconUrl;
+
         }
 
         private async Task<AsyncTexture2D> GetEliteRender(CommonFields.Player player) {
@@ -175,43 +232,25 @@ namespace Nekres.KillProof {
 
             if (EliteRenderRepository.Any(x => x.Key.Equals(player.Elite))) {
                 return EliteRenderRepository[player.Elite];
-            } else {
-                try {
-                    var rawJson = await ("https://api.guildwars2.com/v2/specializations/" + player.Elite)
-                                       .AllowAnyHttpStatus()
-                                       .GetStringAsync();
-                    JObject        jObject   = JObject.Parse(rawJson);
-                    Url            renderUrl = (string)jObject.SelectToken("profession_icon_big");
-                    AsyncTexture2D render    = GameService.Content.GetRenderServiceTexture(renderUrl);
-                    EliteRenderRepository.Add(player.Elite, render);
-                    return render;
-                } catch (FlurlHttpException ex) {
-                    Logger.Warn(ex.Message);
-                    return GameService.Content.GetTexture("733268");
-                }
             }
+
+            (bool responseSuccess, var esRender) = await GetJsonResponse<EliteSpecializationRender>("https://api.guildwars2.com/v2/specializations/" + player.Elite);
+
+            if (responseSuccess) {
+                var render = GameService.Content.GetRenderServiceTexture(esRender.ProfessionIconUrl);
+                EliteRenderRepository.Add(player.Elite, render);
+                return render;
+            }
+
+            return GameService.Content.GetTexture("733268");
         }
 
         private async Task<AsyncTexture2D> GetTokenRender(string key) {
             if (TokenRenderRepository.Any(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))) {
                 return TokenRenderRepository[key];
-            } else {
-                try {
-                    var rawJson = await (KILLPROOF_API_URL + "icons")
-                                       .AllowAnyHttpStatus()
-                                       .GetStringAsync();
-                    Dictionary<string, Url> tokenRenderUrlRepository = JsonConvert.DeserializeObject<Dictionary<string, Url>>(rawJson);
-
-                    Url            renderUrl = tokenRenderUrlRepository.First(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).Value;
-                    AsyncTexture2D render    = GameService.Content.GetRenderServiceTexture(renderUrl);
-                    TokenRenderRepository.Add(key, render);
-
-                    return render;
-                } catch (FlurlHttpException ex) {
-                    Logger.Warn(ex.Message);
-                    return GameService.Content.GetTexture("deleted_item");
-                }
             }
+
+            return _deletedItemTexture;
         }
 
         #endregion
@@ -220,38 +259,25 @@ namespace Nekres.KillProof {
             if (CachedKillProofs.Any(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase))) {
                 return CachedKillProofs.FirstOrDefault(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase));
             } else {
-                try {
-                    var rawJson = await (KILLPROOF_API_URL + $"kp/{account}")
-                                       .AllowAnyHttpStatus()
-                                       .GetStringAsync();
-                    KillProof killproof = JsonConvert.DeserializeObject<KillProof>(rawJson);
-                    if (killproof.error == null) {
-                        CachedKillProofs.Add(killproof);
-                        return killproof;
+                    (bool responseSuccess, var killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}").ConfigureAwait(false);
+
+                    if (responseSuccess && killProof?.error == null) {
+                        CachedKillProofs.Add(killProof);
+                        return killProof;
                     } else {
                         return null;
                     }
-                } catch (FlurlHttpException ex) {
-                    Logger.Warn(ex.Message);
-                    return null;
-                }
             }
         }
 
         #region Panel Related Stuff
 
         private async Task<bool> ProfileAvailable(string account) {
-            try {
-                var rawJson = await (KILLPROOF_API_URL + $"kp/{account}")
-                    .AllowAnyHttpStatus()
-                    .GetStringAsync();
-                var optionalKillProof = JsonConvert.DeserializeObject<KillProof>(rawJson);
-                return (optionalKillProof == null || optionalKillProof.error == null);
-            } catch (FlurlHttpException ex) {
-                Logger.Warn(ex.Message);
-                return false;
-            }
+            (bool responseSuccess, var optionalKillProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}");
+
+            return responseSuccess && optionalKillProof?.error == null;
         }
+
         private void PlayerAddedEvent(CommonFields.Player player) {
             if (player.Self) {
                 LocalPlayerButton.Player = player;
@@ -289,6 +315,7 @@ namespace Nekres.KillProof {
             }
             RepositionPlayers();
         }
+
         private Panel BuildHomePanel(WindowBase wndw) {
             var hPanel = new Panel() {
                 CanScroll = false,
@@ -320,7 +347,7 @@ namespace Nekres.KillProof {
                 Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                 Visible = GameService.ArcDps.RenderPresent
             };
-            var img_killproof = new Image(ContentsManager.GetTexture("killproof_logo.png")) {
+            var img_killproof = new Image(_killProofMeLogoTexture) {
                 Parent = header,
                 Size = new Point(128, 128),
                 Location = new Point(KillProofModule.LEFT_MARGIN + 10, KillProofModule.TOP_MARGIN + 5)
@@ -377,7 +404,7 @@ namespace Nekres.KillProof {
                 ShowShadow = true,
                 Text = @"Powered by www.killproof.me"
             };
-            Task<bool> checkUpdate = Task.Run(() => CheckForUpdate());
+            Task<bool> checkUpdate = Task.Run(() => IsLatestVersion());
             checkUpdate.Wait();
             var versionLabel = new Label() {
                 Parent = footer,
@@ -403,6 +430,7 @@ namespace Nekres.KillProof {
 
             return hPanel;
         }
+
         private void MouseEnterSortButton(object sender, MouseEventArgs e) {
             Control bSortMethod = ((Control)sender);
             bSortMethod.Size = new Point(bSortMethod.Size.X - 4, bSortMethod.Size.Y - 4);
@@ -417,15 +445,15 @@ namespace Nekres.KillProof {
                 Size = wndw.ContentRegion.Size
             };
 
-            var pageLoading = new LoadingSpinner() {
-                Parent = hPanel
-            };
-            pageLoading.Location = new Point(hPanel.Size.X / 2 - pageLoading.Size.X / 2, hPanel.Size.Y / 2 - pageLoading.Size.Y / 2);
+            //var pageLoading = new LoadingSpinner() {
+            //    Parent = hPanel
+            //};
+            //pageLoading.Location = new Point(hPanel.Size.X / 2 - pageLoading.Size.X / 2, hPanel.Size.Y / 2 - pageLoading.Size.Y / 2);
 
             var loader = Task.Run(() => GetKillProofContent(player.AccountName));
             loader.Wait();
 
-            pageLoading.Dispose();
+            //pageLoading.Dispose();
 
             KillProof currentAccount = loader.Result;
 
@@ -477,7 +505,7 @@ namespace Nekres.KillProof {
                     Parent = sortingsMenu,
                     Size = new Point(32, 32),
                     Location = new Point(bSortByAll.Right + 20 + KillProofModule.RIGHT_MARGIN, 0),
-                    Texture = GameService.Content.GetTexture("world-bosses"),
+                    Texture = _sortByWorldBossesTexture,
                     BasicTooltipText = SORTBY_KILLPROOF,
                 };
                 bSortByKillProof.LeftMouseButtonPressed += UpdateSort;
@@ -487,7 +515,7 @@ namespace Nekres.KillProof {
                     Parent = sortingsMenu,
                     Size = new Point(23, 23),
                     Location = new Point(bSortByKillProof.Right + KillProofModule.RIGHT_MARGIN, 5),
-                    Texture = ContentsManager.GetTexture("icon_token.png"),
+                    Texture = _sortByTokenTexture,
                     BasicTooltipText = SORTBY_TOKEN,
                 };
                 bSortByToken.LeftMouseButtonPressed += UpdateSort;
@@ -497,7 +525,7 @@ namespace Nekres.KillProof {
                     Parent = sortingsMenu,
                     Size = new Point(32, 32),
                     Location = new Point(bSortByToken.Right + 20 + KillProofModule.RIGHT_MARGIN, 0),
-                    Texture = ContentsManager.GetTexture("icon_title.png"),
+                    Texture = _sortByTitleTexture,
                     BasicTooltipText = SORTBY_TITLE,
                 };
                 bSortByTitle.LeftMouseButtonPressed += UpdateSort;
@@ -507,7 +535,7 @@ namespace Nekres.KillProof {
                     Parent = sortingsMenu,
                     Size = new Point(32, 32),
                     Location = new Point(bSortByTitle.Right + KillProofModule.RIGHT_MARGIN, 0),
-                    Texture = ContentsManager.GetTexture("icon_raid.png"),
+                    Texture = _sortByRaidTexture,
                     BasicTooltipText = SORTBY_RAID,
                 };
                 bSortByRaid.LeftMouseButtonPressed += UpdateSort;
@@ -517,7 +545,7 @@ namespace Nekres.KillProof {
                     Parent = sortingsMenu,
                     Size = new Point(32, 32),
                     Location = new Point(bSortByRaid.Right + KillProofModule.RIGHT_MARGIN, 0),
-                    Texture = ContentsManager.GetTexture("icon_fractal.png"),
+                    Texture = _sortByFractalTexture,
                     BasicTooltipText = SORTBY_FRACTAL,
                 };
                 bSortByFractal.LeftMouseButtonPressed += UpdateSort;
@@ -578,7 +606,6 @@ namespace Nekres.KillProof {
 
                 var killproofs = DictionaryExtension.MergeLeft(currentAccount.killproofs, currentAccount.tokens);
 
-
                 foreach (KeyValuePair<string, int> token in killproofs) {
                     if (token.Value > 0) {
                         var killProofButton = new KillProofButton() {
@@ -595,12 +622,27 @@ namespace Nekres.KillProof {
                 foreach (KeyValuePair<string, string> token in currentAccount.titles) {
                     var titleButton = new KillProofButton() {
                         Parent = contentPanel,
-                        Icon = ContentsManager.GetTexture("icon_" + token.Value + ".png"),
-                        Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
+                        Font = GameService.Content.DefaultFont16,
                         Text = token.Key,
                         BottomText = token.Value,
                         IsTitleDisplay = true
                     };
+
+                    switch (token.Value) {
+                        case "token":
+                            titleButton.Icon = _sortByTokenTexture;
+                            break;
+                        case "title":
+                            titleButton.Icon = _sortByTitleTexture;
+                            break;
+                        case "raid":
+                            titleButton.Icon = _sortByRaidTexture;
+                            break;
+                        case "fractal":
+                            titleButton.Icon = _sortByFractalTexture;
+                            break;
+                    }
+
                     DisplayedKillProofs.Add(titleButton);
                 }
 
