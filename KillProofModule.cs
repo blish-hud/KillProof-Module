@@ -600,50 +600,78 @@ namespace Nekres.KillProof {
                     ShowTint = true
                 };
                 currentAccountName.Text = currentAccount.account_name;
-                currentAccountLastRefresh.Text = "Last Refresh: " + String.Format("{0:dddd, d. MMMM yyyy - HH:mm:ss}", currentAccount.last_refresh);
+                currentAccountLastRefresh.Text = "Last Refresh: " + $"{currentAccount.last_refresh:dddd, d. MMMM yyyy - HH:mm:ss}";
                 currentAccountKpId.Text = "ID: " + currentAccount.kpid;
                 currentAccountProofUrl.Text = currentAccount.proof_url;
 
-                var killproofs = DictionaryExtension.MergeLeft(currentAccount.killproofs, currentAccount.tokens);
+                if (currentAccount.killproofs != null) {
+                    foreach (KeyValuePair<string, int> killproof in currentAccount.killproofs) {
+                        if (killproof.Value > 0) {
+                            var killProofButton = new KillProofButton() {
+                                Parent     = contentPanel,
+                                Icon       = GetTokenRender(killproof.Key).Result,
+                                Font       = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                                Text       = killproof.Value.ToString(),
+                                BottomText = killproof.Key
+                            };
 
-                foreach (KeyValuePair<string, int> token in killproofs) {
-                    if (token.Value > 0) {
-                        var killProofButton = new KillProofButton() {
-                            Parent = contentPanel,
-                            Icon = GetTokenRender(token.Key).Result,
-                            Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
-                            Text = token.Value.ToString(),
-                            BottomText = token.Key
-                        };
-                        DisplayedKillProofs.Add(killProofButton);
+                            DisplayedKillProofs.Add(killProofButton);
+                        }
                     }
+                } else {
+                    // TODO: Show button indicating that killproofs were explicitly hidden
+                    Logger.Info($"Player '{currentAccount.account_name}' has LI details explicitly hidden.");
                 }
 
-                foreach (KeyValuePair<string, string> token in currentAccount.titles) {
-                    var titleButton = new KillProofButton() {
-                        Parent = contentPanel,
-                        Font = GameService.Content.DefaultFont16,
-                        Text = token.Key,
-                        BottomText = token.Value,
-                        IsTitleDisplay = true
-                    };
+                if (currentAccount.tokens != null) {
+                    foreach (KeyValuePair<string, int> token in currentAccount.tokens) {
+                        if (token.Value > 0) {
+                            var killProofButton = new KillProofButton() {
+                                Parent     = contentPanel,
+                                Icon       = GetTokenRender(token.Key).Result,
+                                Font       = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                                Text       = token.Value.ToString(),
+                                BottomText = token.Key
+                            };
 
-                    switch (token.Value) {
-                        case "token":
-                            titleButton.Icon = _sortByTokenTexture;
-                            break;
-                        case "title":
-                            titleButton.Icon = _sortByTitleTexture;
-                            break;
-                        case "raid":
-                            titleButton.Icon = _sortByRaidTexture;
-                            break;
-                        case "fractal":
-                            titleButton.Icon = _sortByFractalTexture;
-                            break;
+                            DisplayedKillProofs.Add(killProofButton);
+                        }
                     }
+                } else {
+                    // TODO: Show button indicating that tokens were explicitly hidden
+                    Logger.Info($"Player '{currentAccount.account_name}' has tokens explicitly hidden.");
+                }
 
-                    DisplayedKillProofs.Add(titleButton);
+                if (currentAccount.titles != null) {
+                    foreach (KeyValuePair<string, string> token in currentAccount.titles) {
+                        var titleButton = new KillProofButton() {
+                            Parent         = contentPanel,
+                            Font           = GameService.Content.DefaultFont16,
+                            Text           = token.Key,
+                            BottomText     = token.Value,
+                            IsTitleDisplay = true
+                        };
+
+                        switch (token.Value) {
+                            case "token":
+                                titleButton.Icon = _sortByTokenTexture;
+                                break;
+                            case "title":
+                                titleButton.Icon = _sortByTitleTexture;
+                                break;
+                            case "raid":
+                                titleButton.Icon = _sortByRaidTexture;
+                                break;
+                            case "fractal":
+                                titleButton.Icon = _sortByFractalTexture;
+                                break;
+                        }
+
+                        DisplayedKillProofs.Add(titleButton);
+                    }
+                } else {
+                    // TODO: Show button indicating that titles were explicitly hidden
+                    Logger.Info($"Player '{currentAccount.account_name}' has titles and achievements explicitly hidden.");
                 }
 
                 RepositionKillProofs();
