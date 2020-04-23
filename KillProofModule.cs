@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Blish_HUD;
@@ -17,11 +16,14 @@ using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
 using Flurl;
 using Flurl.Http;
+using Gw2Sharp.Models;
+using Gw2Sharp.WebApi.V2.Models;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Nekres.KillProof.Controls;
+using Color = Microsoft.Xna.Framework.Color;
 
 namespace Nekres.KillProof {
 
@@ -58,8 +60,6 @@ namespace Nekres.KillProof {
         private Dictionary<string, AsyncTexture2D> TokenRenderRepository;
         private Dictionary<uint, AsyncTexture2D>   EliteRenderRepository;
         private Dictionary<uint, AsyncTexture2D>   ProfessionRenderRepository;
-        private string[]                           ProfessionRepository;
-
         // Max profile buttons on SquadPanel before dequeuing FiFo behavior.
         private const int MAX_PLAYERS = 15;
 
@@ -126,14 +126,11 @@ namespace Nekres.KillProof {
             GameService.ArcDps.Common.Activate();
         }
 
-        protected override async Task LoadAsync() {
-            (bool responseSuccess, Dictionary<string, Url> tokenRenderUrlRepository) = await GetJsonResponse<Dictionary<string, Url>>(KILLPROOF_API_URL + "icons");
-
-            if (responseSuccess) {
-                foreach (KeyValuePair<string, Url> token in tokenRenderUrlRepository) {
-                    TokenRenderRepository.Add(token.Key, GameService.Content.GetRenderServiceTexture(token.Value));
-                }
-            }
+        protected override async Task LoadAsync()
+        {
+            await Task.Run(LoadTokenIcons);
+            await Task.Run(LoadProfessionIcons);
+            await Task.Run(LoadEliteIcons);
         }
 
         protected override void OnModuleLoaded(EventArgs e) {
@@ -172,9 +169,9 @@ namespace Nekres.KillProof {
         #region Module Logic
 
         private async Task<bool> IsLatestVersion() {
-            (bool responseSuccess, var remoteManifest) = await GetJsonResponse<Manifest>("https://raw.githubusercontent.com/TybaIt/Community-Module-Pack/module-killproof/Kill%20Proof%20Module/manifest.json");
-
-            if (responseSuccess) {
+            (bool responseSuccess, var remoteManifest) = await GetJsonResponse<Manifest>("https://raw.githubusercontent.com/blish-hud/KillProof-Module/master/manifest.json");
+            if (responseSuccess)
+            {
                 if (ModuleInstance.Version >= remoteManifest.Version) {
                     return true;
                 } else {
@@ -183,76 +180,127 @@ namespace Nekres.KillProof {
             } else {
                 Logger.Info("Failed to check for new version.");
             }
-
             return false;
         }
 
         #region Render Getters
+        private async void LoadTokenIcons() {
+            (bool responseSuccess, Dictionary<string, Url> tokenRenderUrlRepository) = await GetJsonResponse<Dictionary<string, Url>>(KILLPROOF_API_URL + "icons");
+            if (responseSuccess) {
+                foreach (KeyValuePair<string, Url> token in tokenRenderUrlRepository) {
+                    var renderUri = token.Value;
+                    if (TokenRenderRepository.Any(x => x.Key == token.Key)) {
+                        try {
+                            var textureDataResponse = await GameService.Gw2WebApi.AnonymousConnection.Client.Render
+                                .DownloadToByteArrayAsync(renderUri);
 
-        private class ProfessionRender {
+                            using (var textureStream = new MemoryStream(textureDataResponse)) {
+                                var loadedTexture =
+                                    Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
 
-            [JsonProperty("icon_big")]
-            public string ProfessionIconUrl;
-
-        }
-
-        private async Task<AsyncTexture2D> GetProfessionRender(CommonFields.Player player) {
-            if (ProfessionRenderRepository.Any(x => x.Key.Equals(player.Profession))) {
-                return ProfessionRenderRepository[player.Profession];
-            } else {
-                (bool profResponseSuccess, string[] professions) = await GetJsonResponse<string[]>("https://api.guildwars2.com/v2/professions");
-
-                if (profResponseSuccess) {
-                    ProfessionRepository = professions;
-
-                    (bool responseSuccess, ProfessionRender pRender) = await GetJsonResponse<ProfessionRender>("https://api.guildwars2.com/v2/professions/" + ProfessionRepository[(int) player.Profession - 1]);
-
-                    if (responseSuccess) {
-                        var render = GameService.Content.GetRenderServiceTexture(pRender.ProfessionIconUrl);
-                        ProfessionRenderRepository.Add(player.Profession, render);
-
-                        return render;
+                                TokenRenderRepository[token.Key].SwapTexture(loadedTexture);
+                            }
+                        } catch (Exception ex) {
+                            Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                        }
+                    } else {
+                        TokenRenderRepository.Add(token.Key, GameService.Content.GetRenderServiceTexture(token.Value));
                     }
                 }
-
-                return GameService.Content.GetTexture("733268");
             }
         }
-
-        // TODO: Switch to Gw2Sharp to avoid deserialization workaround
-        private class EliteSpecializationRender {
-
-            [JsonProperty("profession_icon_big")]
-            public string ProfessionIconUrl;
-
+        private async Task<IReadOnlyList<Profession>> LoadProfessions() {
+            return await GameService.Gw2WebApi.AnonymousConnection.Client.V2.Professions
+                .ManyAsync(Enum.GetValues(typeof(ProfessionType)).Cast<ProfessionType>());
         }
+        private async void LoadProfessionIcons() {
+            var professions = await LoadProfessions();
+            foreach (Profession profession in professions) {
+                var renderUri = (string)profession.IconBig;
+                var id = (uint)Enum.GetValues(typeof(ProfessionType)).Cast<ProfessionType>().ToList()
+                                  .Find(x => x.ToString().Equals(profession.Id, StringComparison.InvariantCultureIgnoreCase));
+                if (ProfessionRenderRepository.Any(x => x.Key == id)) {
+                    try {
+                        var textureDataResponse = await GameService.Gw2WebApi.AnonymousConnection.Client.Render
+                            .DownloadToByteArrayAsync(renderUri);
 
-        private async Task<AsyncTexture2D> GetEliteRender(CommonFields.Player player) {
-            if (player.Elite == 0) { return GetProfessionRender(player).Result; }
+                        using (var textureStream = new MemoryStream(textureDataResponse)) {
+                            var loadedTexture =
+                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
 
-            if (EliteRenderRepository.Any(x => x.Key.Equals(player.Elite))) {
-                return EliteRenderRepository[player.Elite];
+                            ProfessionRenderRepository[id].SwapTexture(loadedTexture);
+                        }
+                    } catch (Exception ex) {
+                        Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                    }
+                } else {
+                    ProfessionRenderRepository.Add(id, GameService.Content.GetRenderServiceTexture(renderUri));
+                }
             }
+        }
+        private async void LoadEliteIcons() {
+            await GetJsonResponse<int[]>("https://api.guildwars2.com/v2/specializations").ContinueWith(
+                async response =>
+                {
+                    (bool responseSuccess, int[] specializations) = (response.Result.Item1, response.Result.Item2);
+                    if (!responseSuccess) return;
+                    foreach (var i in specializations)
+                        await GetJsonResponse<JObject>("https://api.guildwars2.com/v2/specializations/" + i)
+                            .ContinueWith(
+                                async result => {
+                                    var jObj = (JObject)result.Result.Item2;
+                                    if (!(bool)jObj["elite"]) return;
+                                    var id = (uint)jObj["id"];
+                                    if (EliteRenderRepository.Any(x =>
+                                        x.Key == id)) {
+                                        var renderUri = (string)jObj["profession_icon_big"];
+                                        try {
+                                            var textureDataResponse = await GameService.Gw2WebApi.AnonymousConnection
+                                                .Client
+                                                .Render.DownloadToByteArrayAsync(renderUri);
 
-            (bool responseSuccess, var esRender) = await GetJsonResponse<EliteSpecializationRender>("https://api.guildwars2.com/v2/specializations/" + player.Elite);
+                                            using (var textureStream = new MemoryStream(textureDataResponse)) {
+                                                var loadedTexture =
+                                                    Texture2D.FromStream(GameService.Graphics.GraphicsDevice,
+                                                        textureStream);
 
-            if (responseSuccess) {
-                var render = GameService.Content.GetRenderServiceTexture(esRender.ProfessionIconUrl);
+                                                EliteRenderRepository[id].SwapTexture(loadedTexture);
+                                            }
+                                        } catch (Exception ex) {
+                                            Logger.Warn(ex, $"Request to render service for {renderUri} failed.",
+                                                renderUri);
+                                        }
+                                    } else {
+                                        EliteRenderRepository.Add(id, GameService.Content.GetRenderServiceTexture(
+                                            (string)jObj["profession_icon_big"]));
+                                    }
+                                });
+                });
+        }
+        private AsyncTexture2D GetProfessionRender(CommonFields.Player player) {
+            if (!ProfessionRenderRepository.Any(x => x.Key.Equals(player.Profession))) {
+                var render = new AsyncTexture2D();
+                ProfessionRenderRepository.Add(player.Profession, render);
+            }
+            return ProfessionRenderRepository[player.Profession];
+        }
+        private AsyncTexture2D GetEliteRender(CommonFields.Player player) {
+            if (player.Elite == 0) { return GetProfessionRender(player); }
+            if (!EliteRenderRepository.Any(x => x.Key.Equals(player.Elite)))
+            {
+                var render = new AsyncTexture2D();
                 EliteRenderRepository.Add(player.Elite, render);
-                return render;
             }
-
-            return GameService.Content.GetTexture("733268");
+            return EliteRenderRepository[player.Elite];
         }
-
-        private async Task<AsyncTexture2D> GetTokenRender(string key) {
-            if (TokenRenderRepository.Any(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))) {
-                return TokenRenderRepository[key];
+        private AsyncTexture2D GetTokenRender(string key) {
+            if (!TokenRenderRepository.Any(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                var render = new AsyncTexture2D();
+                TokenRenderRepository.Add(key, render);
             }
-
-            return _deletedItemTexture;
+            return TokenRenderRepository[key];
         }
-
         #endregion
 
         private async Task<KillProof> GetKillProofContent(string account) {
@@ -281,7 +329,7 @@ namespace Nekres.KillProof {
         private void PlayerAddedEvent(CommonFields.Player player) {
             if (player.Self) {
                 LocalPlayerButton.Player = player;
-                LocalPlayerButton.Icon = GetEliteRender(player).Result;
+                LocalPlayerButton.Icon = GetEliteRender(player);
                 LocalPlayerButton.LeftMouseButtonPressed += delegate {
                     GameService.Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(GameService.Overlay.BlishHudWindow, player));
                 };
@@ -291,7 +339,7 @@ namespace Nekres.KillProof {
             if (DisplayedPlayers.Any(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase))
                 || !ProfileAvailable(player.AccountName).Result) { return; };
 
-            PlayerNotification.ShowNotification(player.AccountName, GetEliteRender(player).Result, "profile available", 10);
+            PlayerNotification.ShowNotification(player.AccountName, GetEliteRender(player), "profile available", 10);
 
             var optionalButton = DisplayedPlayers.FirstOrDefault(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase));
 
@@ -301,7 +349,7 @@ namespace Nekres.KillProof {
                 var playerButton = new PlayerButton() {
                     Parent = SquadPanel,
                     Player = player,
-                    Icon = GetEliteRender(player).Result,
+                    Icon = GetEliteRender(player),
                     Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular)
                 };
                 playerButton.LeftMouseButtonPressed += delegate {
@@ -311,7 +359,7 @@ namespace Nekres.KillProof {
                 DisplayedPlayers.Enqueue(playerButton);
             } else {
                 optionalButton.Player = player;
-                optionalButton.Icon = GetEliteRender(player).Result;
+                optionalButton.Icon = GetEliteRender(player);
             }
             RepositionPlayers();
         }
@@ -360,21 +408,19 @@ namespace Nekres.KillProof {
                 ShowShadow = true,
                 Text = "Account Name or KillProof.me-ID:"
             };
-            // Encapsule TextBox because not thread safe.
-            GameService.Overlay.QueueMainThreadUpdate((gameTime) => {
-                var tb_account_name = new TextBox() {
-                    Parent = header,
-                    Size = new Point(200, 30),
-                    Location = new Point(header.Width / 2 - 100, lab_account_name.Bottom + KillProofModule.TOP_MARGIN),
-                    PlaceholderText = "Player.0000",
+            var tb_account_name = new TextBox() {
+                Parent = header,
+                Size = new Point(200, 30),
+                Location = new Point(header.Width / 2 - 100, lab_account_name.Bottom + KillProofModule.TOP_MARGIN),
+                PlaceholderText = "Player.0000",
 
-                };
-                tb_account_name.EnterPressed += delegate {
-                    if (!string.Equals(tb_account_name.Text, "") && !Regex.IsMatch(tb_account_name.Text, @"[^a-zA-Z0-9.\s]|^\.*$")) {
-                        wndw.Navigate(BuildKillProofPanel(wndw, new CommonFields.Player(null, tb_account_name.Text, 0, 0, false)));
-                    }
-                };
-            });
+            };
+            tb_account_name.EnterPressed += delegate {
+                if (!string.Equals(tb_account_name.Text, "") && !Regex.IsMatch(tb_account_name.Text, @"[^a-zA-Z0-9.\s]|^\.*$")) {
+                    wndw.Navigate(BuildKillProofPanel(wndw, new CommonFields.Player(null, tb_account_name.Text, 0, 0, false)));
+                }
+                tb_account_name.Focused = false;
+            };
             var lab_squadPanel = new Label() {
                 Parent = header,
                 Size = new Point(300, 40),
@@ -431,13 +477,13 @@ namespace Nekres.KillProof {
             return hPanel;
         }
 
-        private void MouseEnterSortButton(object sender, MouseEventArgs e) {
+        private void MousePressedSortButton(object sender, MouseEventArgs e) {
             Control bSortMethod = ((Control)sender);
             bSortMethod.Size = new Point(bSortMethod.Size.X - 4, bSortMethod.Size.Y - 4);
         }
         private void MouseLeftSortButton(object sender, MouseEventArgs e) {
             Control bSortMethod = ((Control)sender);
-            bSortMethod.Size = new Point(bSortMethod.Size.X + 4, bSortMethod.Size.Y + 4);
+            bSortMethod.Size = new Point(32, 32);
         }
         public Panel BuildKillProofPanel(WindowBase wndw, CommonFields.Player player) {
             var hPanel = new Panel() {
@@ -499,7 +545,8 @@ namespace Nekres.KillProof {
                     BasicTooltipText = SORTBY_ALL,
                 };
                 bSortByAll.LeftMouseButtonPressed += UpdateSort;
-                bSortByAll.MouseEntered += MouseEnterSortButton;
+                bSortByAll.LeftMouseButtonPressed += MousePressedSortButton;
+                bSortByAll.LeftMouseButtonReleased += MouseLeftSortButton;
                 bSortByAll.MouseLeft += MouseLeftSortButton;
                 var bSortByKillProof = new Image() {
                     Parent = sortingsMenu,
@@ -509,17 +556,19 @@ namespace Nekres.KillProof {
                     BasicTooltipText = SORTBY_KILLPROOF,
                 };
                 bSortByKillProof.LeftMouseButtonPressed += UpdateSort;
-                bSortByKillProof.MouseEntered += MouseEnterSortButton;
+                bSortByKillProof.LeftMouseButtonPressed += MousePressedSortButton;
+                bSortByKillProof.LeftMouseButtonReleased += MouseLeftSortButton;
                 bSortByKillProof.MouseLeft += MouseLeftSortButton;
                 var bSortByToken = new Image() {
                     Parent = sortingsMenu,
-                    Size = new Point(23, 23),
-                    Location = new Point(bSortByKillProof.Right + KillProofModule.RIGHT_MARGIN, 5),
+                    Size = new Point(32, 32),
+                    Location = new Point(bSortByKillProof.Right + KillProofModule.RIGHT_MARGIN, 0),
                     Texture = _sortByTokenTexture,
                     BasicTooltipText = SORTBY_TOKEN,
                 };
                 bSortByToken.LeftMouseButtonPressed += UpdateSort;
-                bSortByToken.MouseEntered += MouseEnterSortButton;
+                bSortByToken.LeftMouseButtonPressed += MousePressedSortButton;
+                bSortByToken.LeftMouseButtonReleased += MouseLeftSortButton;
                 bSortByToken.MouseLeft += MouseLeftSortButton;
                 var bSortByTitle = new Image() {
                     Parent = sortingsMenu,
@@ -529,7 +578,8 @@ namespace Nekres.KillProof {
                     BasicTooltipText = SORTBY_TITLE,
                 };
                 bSortByTitle.LeftMouseButtonPressed += UpdateSort;
-                bSortByTitle.MouseEntered += MouseEnterSortButton;
+                bSortByTitle.LeftMouseButtonPressed += MousePressedSortButton;
+                bSortByTitle.LeftMouseButtonReleased += MouseLeftSortButton;
                 bSortByTitle.MouseLeft += MouseLeftSortButton;
                 var bSortByRaid = new Image() {
                     Parent = sortingsMenu,
@@ -539,7 +589,8 @@ namespace Nekres.KillProof {
                     BasicTooltipText = SORTBY_RAID,
                 };
                 bSortByRaid.LeftMouseButtonPressed += UpdateSort;
-                bSortByRaid.MouseEntered += MouseEnterSortButton;
+                bSortByRaid.LeftMouseButtonPressed += MousePressedSortButton;
+                bSortByRaid.LeftMouseButtonReleased += MouseLeftSortButton;
                 bSortByRaid.MouseLeft += MouseLeftSortButton;
                 var bSortByFractal = new Image() {
                     Parent = sortingsMenu,
@@ -549,7 +600,8 @@ namespace Nekres.KillProof {
                     BasicTooltipText = SORTBY_FRACTAL,
                 };
                 bSortByFractal.LeftMouseButtonPressed += UpdateSort;
-                bSortByFractal.MouseEntered += MouseEnterSortButton;
+                bSortByFractal.LeftMouseButtonPressed += MousePressedSortButton;
+                bSortByFractal.LeftMouseButtonReleased += MouseLeftSortButton;
                 bSortByFractal.MouseLeft += MouseLeftSortButton;
                 /// ###################
                 ///      </HEADER>
@@ -609,7 +661,7 @@ namespace Nekres.KillProof {
                         if (killproof.Value > 0) {
                             var killProofButton = new KillProofButton() {
                                 Parent     = contentPanel,
-                                Icon       = GetTokenRender(killproof.Key).Result,
+                                Icon       = GetTokenRender(killproof.Key),
                                 Font       = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
                                 Text       = killproof.Value.ToString(),
                                 BottomText = killproof.Key
@@ -628,7 +680,7 @@ namespace Nekres.KillProof {
                         if (token.Value > 0) {
                             var killProofButton = new KillProofButton() {
                                 Parent     = contentPanel,
-                                Icon       = GetTokenRender(token.Key).Result,
+                                Icon       = GetTokenRender(token.Key),
                                 Font       = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
                                 Text       = token.Value.ToString(),
                                 BottomText = token.Key
