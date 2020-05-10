@@ -485,27 +485,8 @@ namespace Nekres.KillProof {
             Control bSortMethod = ((Control)sender);
             bSortMethod.Size = new Point(32, 32);
         }
-        public Panel BuildKillProofPanel(WindowBase wndw, CommonFields.Player player) {
-            var hPanel = new Panel() {
-                CanScroll = false,
-                Size = wndw.ContentRegion.Size
-            };
 
-            //var pageLoading = new LoadingSpinner() {
-            //    Parent = hPanel
-            //};
-            //pageLoading.Location = new Point(hPanel.Size.X / 2 - pageLoading.Size.X / 2, hPanel.Size.Y / 2 - pageLoading.Size.Y / 2);
-
-            var loader = Task.Run(() => GetKillProofContent(player.AccountName));
-            loader.Wait();
-
-            //pageLoading.Dispose();
-
-            KillProof currentAccount = loader.Result;
-
-            foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Dispose(); }
-            DisplayedKillProofs.Clear();
-
+        private void FinishLoadingKillProofPanel(WindowBase wndw, Panel hPanel, CommonFields.Player player, KillProof currentAccount) {
             if (currentAccount != null) {
                 /// ###################
                 ///      <HEADER>
@@ -660,10 +641,10 @@ namespace Nekres.KillProof {
                     foreach (KeyValuePair<string, int> killproof in currentAccount.killproofs) {
                         if (killproof.Value > 0) {
                             var killProofButton = new KillProofButton() {
-                                Parent     = contentPanel,
-                                Icon       = GetTokenRender(killproof.Key),
-                                Font       = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
-                                Text       = killproof.Value.ToString(),
+                                Parent = contentPanel,
+                                Icon = GetTokenRender(killproof.Key),
+                                Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                                Text = killproof.Value.ToString(),
                                 BottomText = killproof.Key
                             };
 
@@ -679,10 +660,10 @@ namespace Nekres.KillProof {
                     foreach (KeyValuePair<string, int> token in currentAccount.tokens) {
                         if (token.Value > 0) {
                             var killProofButton = new KillProofButton() {
-                                Parent     = contentPanel,
-                                Icon       = GetTokenRender(token.Key),
-                                Font       = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
-                                Text       = token.Value.ToString(),
+                                Parent = contentPanel,
+                                Icon = GetTokenRender(token.Key),
+                                Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                                Text = token.Value.ToString(),
                                 BottomText = token.Key
                             };
 
@@ -697,10 +678,10 @@ namespace Nekres.KillProof {
                 if (currentAccount.titles != null) {
                     foreach (KeyValuePair<string, string> token in currentAccount.titles) {
                         var titleButton = new KillProofButton() {
-                            Parent         = contentPanel,
-                            Font           = GameService.Content.DefaultFont16,
-                            Text           = token.Key,
-                            BottomText     = token.Value,
+                            Parent = contentPanel,
+                            Font = GameService.Content.DefaultFont16,
+                            Text = token.Key,
+                            BottomText = token.Value,
                             IsTitleDisplay = true
                         };
 
@@ -798,6 +779,27 @@ namespace Nekres.KillProof {
             };
 
             CurrentProfile = currentAccount;
+        }
+
+        public Panel BuildKillProofPanel(WindowBase wndw, CommonFields.Player player) {
+            var hPanel = new Panel() {
+                CanScroll = false,
+                Size = wndw.ContentRegion.Size
+            };
+
+            var pageLoading = new LoadingSpinner() {
+                Parent = hPanel
+            };
+
+            pageLoading.Location = new Point(hPanel.Size.X / 2 - pageLoading.Size.X / 2, hPanel.Size.Y / 2 - pageLoading.Size.Y / 2);
+
+            foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Dispose(); }
+            DisplayedKillProofs.Clear();
+
+            GetKillProofContent(player.AccountName).ContinueWith((kpResult) => {
+                 FinishLoadingKillProofPanel(wndw, hPanel, player, kpResult.Result);
+                 pageLoading.Dispose();
+             });
 
             return hPanel;
         }
