@@ -964,14 +964,14 @@ namespace Nekres.KillProof {
             }
         }
 
-        private int GetMyQuantity(string tokenName)
+        private async Task<int> GetMyQuantity(string tokenName)
         {
             if (!GameService.ArcDps.Loaded || GameService.ArcDps.Common.PlayersInSquad.Count == 0) return 0;
             try {
                 if (!TokenQuantityRepository.Any(x => x.Key.Equals(tokenName))) {
                     if (MyKillProof == null) {
                         var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
-                        MyKillProof = GetKillProofContent(player.AccountName).Result;
+                        MyKillProof = await GetKillProofContent(player.AccountName);
                     }
                     var separatorIndex = tokenName.IndexOf('|');
                     var kpName = tokenName.Substring(separatorIndex == -1 ? 0 : separatorIndex + 2);
@@ -1030,12 +1030,12 @@ namespace Nekres.KillProof {
             foreach (KeyValuePair<string, int> pair in TokenIdRepository) {
                 dropdown.Items.Add(pair.Key);
             }
-            dropdown.SelectedItem = "Legendary Insight";
-            quantity.Text = GetMyQuantity(dropdown.SelectedItem) + "";
-            dropdown.ValueChanged += delegate
+            dropdown.ValueChanged += async delegate
             {
-                quantity.Text = GetMyQuantity(dropdown.SelectedItem) + "";
+                var value = await GetMyQuantity(dropdown.SelectedItem);
+                quantity.Text = value + "";
             };
+            dropdown.SelectedItem = "Legendary Insight";
             var sendButton = new Image() {
                 Parent = bgPanel,
                 Size = new Point(24, 24),
@@ -1090,7 +1090,7 @@ namespace Nekres.KillProof {
                 sendButton.Size = new Point(22, 22);
                 sendButton.Location = new Point(rightBracket.Right + 3, 2);
             };
-            sendButton.LeftMouseButtonReleased += delegate {
+            sendButton.LeftMouseButtonReleased += async delegate {
                 sendButton.Size = new Point(24, 24);
                 sendButton.Location = new Point(rightBracket.Right + 1, 0);
 
@@ -1099,7 +1099,7 @@ namespace Nekres.KillProof {
                 if (randomizeButton.BackgroundColor == Color.LightGreen) {
                     var rand = Randomizer.Next(0, tokens.Count);
                     chatLink.ItemId = TokenIdRepository[tokens[rand]];
-                    chatLink.Quantity = Convert.ToByte(GetMyQuantity(tokens[rand]));
+                    chatLink.Quantity = Convert.ToByte(await GetMyQuantity(tokens[rand]));
                     SendToChat(chatLink.ToString());
                 } else {
                     chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
@@ -1112,10 +1112,12 @@ namespace Nekres.KillProof {
             {
                 var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 0.0f}, 0.2f);
             };
-            bgPanel.PropertyChanged += delegate(object sender, PropertyChangedEventArgs e)
+            bgPanel.PropertyChanged += async delegate(object sender, PropertyChangedEventArgs e)
             {
-                if (e.PropertyName.Equals("Visible", StringComparison.InvariantCultureIgnoreCase) && bgPanel.Visible)
-                    quantity.Text = GetMyQuantity(dropdown.SelectedItem) + "";
+                if (!e.PropertyName.Equals("Visible", StringComparison.InvariantCultureIgnoreCase) ||
+                    !bgPanel.Visible) return;
+                var value = await GetMyQuantity(dropdown.SelectedItem);
+                quantity.Text = value + "";
             };
             return bgPanel;
         }
