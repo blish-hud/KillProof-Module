@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Windows;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
@@ -201,7 +201,7 @@ namespace Nekres.KillProof {
                 LocalPlayerButton.Visible        = true;
             }
             if (KillProofQuickMenu != null) {
-                KillProofQuickMenu.Visible = GameService.GameIntegration.IsInGame;
+                KillProofQuickMenu.Visible = GameService.GameIntegration.IsInGame && GameService.ArcDps.Common.PlayersInSquad.Count != 0;
             }
         }
 
@@ -240,19 +240,25 @@ namespace Nekres.KillProof {
             return false;
         }
         private void SendToChat(string message) {
-            System.Windows.Forms.Clipboard.SetText(message);
-            Task.Run(() =>
-            {
-                Keyboard.Press(VirtualKeyShort.RETURN, true);
-                Keyboard.Release(VirtualKeyShort.RETURN, true);
-                Keyboard.Press(VirtualKeyShort.LCONTROL, true);
-                Keyboard.Press(VirtualKeyShort.KEY_V, true);
-                Thread.Sleep(50);
-                Keyboard.Release(VirtualKeyShort.LCONTROL, true);
-                Keyboard.Release(VirtualKeyShort.KEY_V, true);
-                Keyboard.Press(VirtualKeyShort.RETURN, true);
-                Keyboard.Release(VirtualKeyShort.RETURN, true);
-            });
+            ClipboardUtil.WindowsClipboardService.SetTextAsync(message)
+                .ContinueWith((clipboardResult) => {
+                    if (clipboardResult.IsFaulted)
+                        Logger.Warn(clipboardResult.Exception, "Failed to set clipboard text to {message}!",
+                            message);
+                    else
+                        Task.Run(() =>
+                        {
+                            Keyboard.Press(VirtualKeyShort.RETURN, true);
+                            Keyboard.Release(VirtualKeyShort.RETURN, true);
+                            Keyboard.Press(VirtualKeyShort.LCONTROL, true);
+                            Keyboard.Press(VirtualKeyShort.KEY_V, true);
+                            Thread.Sleep(50);
+                            Keyboard.Release(VirtualKeyShort.LCONTROL, true);
+                            Keyboard.Release(VirtualKeyShort.KEY_V, true);
+                            Keyboard.Press(VirtualKeyShort.RETURN, true);
+                            Keyboard.Release(VirtualKeyShort.RETURN, true);
+                        });
+                });
         }
         #region Render Getters
         private async void LoadTokenIcons() {
@@ -460,7 +466,7 @@ namespace Nekres.KillProof {
             var killProofQuickAccess = new Checkbox()
             {
                 Parent = header,
-                Location = new Point(selfButtonPanel.Location.X, selfButtonPanel.Bottom),
+                Location = new Point(selfButtonPanel.Location.X + LEFT_MARGIN, selfButtonPanel.Bottom),
                 Size = new Point(selfButtonPanel.Width, 30),
                 Text = "Show Quick Access Menu",
                 BasicTooltipText = "Shows a menu on the top left corner of your screen which allows you to quickly access and ping your killproofs.",
@@ -960,7 +966,7 @@ namespace Nekres.KillProof {
 
         private int GetMyQuantity(string tokenName)
         {
-            if (GameService.ArcDps.Common.PlayersInSquad.Count == 0) return 0;
+            if (!GameService.ArcDps.Loaded || GameService.ArcDps.Common.PlayersInSquad.Count == 0) return 0;
             try {
                 if (!TokenQuantityRepository.Any(x => x.Key.Equals(tokenName))) {
                     if (MyKillProof == null) {
@@ -983,13 +989,6 @@ namespace Nekres.KillProof {
         }
         private Panel BuildKillProofQuickMenu()
         {
-            if (!GameService.ArcDps.Loaded)
-            {
-                /*ScreenNotification.ShowNotification(
-                    "[KillProofModule] The Quick Access Menu requires the 'ArcDpsService' to be loaded.",
-                    ScreenNotification.NotificationType.Error, null, 10);*/
-                return null;
-            }
             var bgPanel = new Panel() {
                 Parent = GameService.Graphics.SpriteScreen,
                 Location = new Point(10, 38),
@@ -1112,6 +1111,11 @@ namespace Nekres.KillProof {
             bgPanel.Disposed += delegate
             {
                 var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 0.0f}, 0.2f);
+            };
+            bgPanel.PropertyChanged += delegate(object sender, PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName.Equals("Visible", StringComparison.InvariantCultureIgnoreCase) && bgPanel.Visible)
+                    quantity.Text = GetMyQuantity(dropdown.SelectedItem) + "";
             };
             return bgPanel;
         }
