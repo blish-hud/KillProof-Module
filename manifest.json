@@ -1,11 +1,11 @@
 {
   "name": "KillProof Module",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "namespace": "Nekres.KillProof",
   "package": "KillProof Module.dll",
   "manifest_version": 1,
 
-  "description": "Check someone's kills for raiding. Uses ArcDPS Bridge service if available.",
+  "description": "Check someone's kills for raiding. Uses ArcDPS Bridge service if available.\n\nPowered by www.killproof.me",
   "dependencies": {
     "bh.blishhud": ">=0.5.0"
   },
