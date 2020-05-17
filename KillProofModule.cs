@@ -1016,7 +1016,8 @@ namespace Nekres.KillProof {
             var dropdown = new Dropdown() {
                 Parent = bgPanel,
                 Size = new Point(260, 20),
-                Location = new Point(quantity.Right + 2, 3)
+                Location = new Point(quantity.Right + 2, 3),
+                SelectedItem = "Loading .."
             };
             var rightBracket = new Label() {
                 Parent = bgPanel,
