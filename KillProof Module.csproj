@@ -73,6 +73,9 @@
     <Compile Include="KillProofModule.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="AsyncClipboardService, Version=1.7.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\AsyncClipboardService.1.7.1\lib\net45\AsyncClipboardService.dll</HintPath>
+    </Reference>
     <Reference Include="Blish HUD">
       <HintPath>..\Blish-HUD\Blish HUD\bin\x64\Debug\Blish HUD.exe</HintPath>
       <Private>False</Private>
@@ -144,6 +147,7 @@
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">
