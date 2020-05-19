@@ -1002,7 +1002,6 @@ namespace Nekres.KillProof {
             };
             bgPanel.MouseEntered += delegate(object sender, MouseEventArgs e)
             {
-                GameService.Animation.Tweener.TargetCancel(bgPanel);
                 var fadeIn = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 1.0f }, 0.45f);
             };
             var leftBracket = new Label() {
@@ -1027,7 +1026,6 @@ namespace Nekres.KillProof {
             };
             bgPanel.MouseLeft += delegate (object sender, MouseEventArgs e) {
                 //TODO: Check for when dropdown IsExpanded
-                GameService.Animation.Tweener.TargetCancel(bgPanel);
                 var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 0.4f }, 0.45f);
             };
             var rightBracket = new Label() {
@@ -1174,7 +1172,7 @@ namespace Nekres.KillProof {
             };
             bgPanel.Disposed += delegate
             {
-                GameService.Animation.Tweener.TargetCancel(bgPanel);
+                var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 0.0f }, 0.2f);
             };
             bgPanel.PropertyChanged += async delegate(object sender, PropertyChangedEventArgs e)
             {
