@@ -20,6 +20,7 @@ using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
 using Flurl;
 using Flurl.Http;
+using Glide;
 using Gw2Sharp.Models;
 using Gw2Sharp.WebApi.V2.Models;
 using Microsoft.Xna.Framework;
@@ -139,7 +140,7 @@ namespace Nekres.KillProof {
             "W7"
         };
         private Random Randomizer;
-        private Dictionary<string, int> TokenQuantityRepository;
+        private Dictionary<int, int> TokenQuantityRepository;
         [ImportingConstructor]
         public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
 
@@ -171,7 +172,7 @@ namespace Nekres.KillProof {
             DisplayedKillProofs        = new List<KillProofButton>();
             DisplayedPlayers           = new Queue<PlayerButton>();
             CachedKillProofs           = new List<KillProof>();
-            TokenQuantityRepository    = new Dictionary<string, int>();
+            TokenQuantityRepository    = new Dictionary<int, int>();
 
             if (KillProofQuickMenuEnabled.Value) { KillProofQuickMenu = BuildKillProofQuickMenu(); }
 
@@ -200,7 +201,9 @@ namespace Nekres.KillProof {
                 LocalPlayerButton.Parent.Visible = true;
                 LocalPlayerButton.Visible        = true;
             }
-            if (KillProofQuickMenu != null) {
+
+            if (KillProofQuickMenu != null)
+            {
                 KillProofQuickMenu.Visible = GameService.GameIntegration.IsInGame && GameService.ArcDps.Common.PlayersInSquad.Count != 0;
             }
         }
@@ -964,24 +967,21 @@ namespace Nekres.KillProof {
             }
         }
 
-        private async Task<int> GetMyQuantity(string tokenName)
+        private async Task<int> GetMyQuantity(int tokenId)
         {
             if (!GameService.ArcDps.Loaded || GameService.ArcDps.Common.PlayersInSquad.Count == 0) return 0;
             try {
-                if (!TokenQuantityRepository.Any(x => x.Key.Equals(tokenName))) {
+                if (!TokenQuantityRepository.Any(x => x.Key.Equals(tokenId))) {
                     if (MyKillProof == null) {
                         var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
                         MyKillProof = await GetKillProofContent(player.AccountName);
                     }
-                    var separatorIndex = tokenName.IndexOf('|');
-                    var kpName = tokenName.Substring(separatorIndex == -1 ? 0 : separatorIndex + 2);
-
+                    var kpName = TokenIdRepository.First(x => x.Value.Equals(tokenId)).Key.Split('|').Reverse().ToList()[0].Trim();
                     var killproofs = MyKillProof.tokens.MergeLeft(MyKillProof.killproofs);
-
                     var currentQuantity = killproofs.FirstOrDefault(x => x.Key.Equals(kpName));
-                    TokenQuantityRepository.Add(tokenName, currentQuantity.Equals(default) ? 1 : currentQuantity.Value);
+                    TokenQuantityRepository.Add(tokenId, currentQuantity.Equals(default) ? 1 : currentQuantity.Value);
                 }
-                return TokenQuantityRepository[tokenName];
+                return TokenQuantityRepository[tokenId];
             } catch (KeyNotFoundException ex) {
                 Logger.Warn(ex.Message);
                 return 0;
@@ -993,11 +993,17 @@ namespace Nekres.KillProof {
                 Parent = GameService.Graphics.SpriteScreen,
                 Location = new Point(10, 38),
                 Size = new Point(400, 40),
-                Opacity = 0.0f,
+                Opacity = 0.4f,
+                Visible = false,
                 ShowBorder = true
             };
             bgPanel.Resized += delegate (object sender, ResizedEventArgs args) {
                 bgPanel.Location = new Point(10, 38);
+            };
+            bgPanel.MouseEntered += delegate(object sender, MouseEventArgs e)
+            {
+                GameService.Animation.Tweener.TargetCancel(bgPanel);
+                var fadeIn = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 1.0f }, 0.45f);
             };
             var leftBracket = new Label() {
                 Parent = bgPanel,
@@ -1019,6 +1025,11 @@ namespace Nekres.KillProof {
                 Location = new Point(quantity.Right + 2, 3),
                 SelectedItem = "Loading .."
             };
+            bgPanel.MouseLeft += delegate (object sender, MouseEventArgs e) {
+                //TODO: Check for when dropdown IsExpanded
+                GameService.Animation.Tweener.TargetCancel(bgPanel);
+                var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 0.4f }, 0.45f);
+            };
             var rightBracket = new Label() {
                 Parent = bgPanel,
                 Size = new Point(10, bgPanel.Height),
@@ -1033,7 +1044,7 @@ namespace Nekres.KillProof {
             }
             dropdown.ValueChanged += async delegate
             {
-                var value = await GetMyQuantity(dropdown.SelectedItem);
+                var value = await GetMyQuantity(TokenIdRepository[dropdown.SelectedItem]);
                 quantity.Text = value + "";
             };
             dropdown.SelectedItem = "Legendary Insight";
@@ -1043,7 +1054,7 @@ namespace Nekres.KillProof {
                 Location = new Point(rightBracket.Right + 1, 0),
                 Texture = GameService.Content.GetTexture("784268"),
                 SpriteEffects = SpriteEffects.FlipHorizontally,
-                BasicTooltipText = "Send"
+                BasicTooltipText = "Send To Chat\nLeft-Click: Only send code up to a stack's worth (250x). \nRight-Click: Send killproof.me total amount."
             };
             var randomizeButton = new StandardButton() {
                 Parent = bgPanel,
@@ -1051,19 +1062,12 @@ namespace Nekres.KillProof {
                 Location = new Point(sendButton.Right + 7, 0),
                 Text = "W1",
                 BackgroundColor = Color.Gray,
-                BasicTooltipText = "Random token from selected wing when pressing send.\nLeft-Click: Toggle\nRight-Click: Iterate wings"
+                BasicTooltipText = "Random token from selected wing when pressing Send To Chat.\nLeft-Click: Toggle\nRight-Click: Iterate wings"
             };
             randomizeButton.LeftMouseButtonPressed += delegate {
                 randomizeButton.Size = new Point(27, 22);
                 randomizeButton.Location = new Point(sendButton.Right + 5, 2);
             };
-
-            var tokens = new List<string>();
-            foreach (KeyValuePair<string, int> pair in TokenIdRepository) {
-                if (pair.Key.StartsWith(randomizeButton.Text)) {
-                    tokens.Add(pair.Key);
-                }
-            }
 
             randomizeButton.LeftMouseButtonReleased += delegate {
                 randomizeButton.Size = new Point(29, 24);
@@ -1080,12 +1084,6 @@ namespace Nekres.KillProof {
                 var current = RaidWings.FindIndex(x => x.Equals(randomizeButton.Text));
                 var next = current + 1 <= RaidWings.Count - 1 ? current + 1 : 0;
                 randomizeButton.Text = RaidWings[next];
-                tokens = new List<string>();
-                foreach (KeyValuePair<string, int> pair in TokenIdRepository) {
-                    if (pair.Key.StartsWith(randomizeButton.Text)) {
-                        tokens.Add(pair.Key);
-                    }
-                }
             };
             sendButton.LeftMouseButtonPressed += delegate {
                 sendButton.Size = new Point(22, 22);
@@ -1097,27 +1095,82 @@ namespace Nekres.KillProof {
 
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
-                if (randomizeButton.BackgroundColor == Color.LightGreen) {
-                    var rand = Randomizer.Next(0, tokens.Count);
-                    chatLink.ItemId = TokenIdRepository[tokens[rand]];
-                    chatLink.Quantity = Convert.ToByte(await GetMyQuantity(tokens[rand]));
+                if (randomizeButton.BackgroundColor == Color.LightGreen)
+                {
+                    var selectWingIds = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
+                    var tokenIds = selectWingIds.Values.ToList();
+                    var rand = Randomizer.Next(0, tokenIds.Count);
+                    chatLink.ItemId = tokenIds[rand];
+                    chatLink.Quantity = Convert.ToByte(await GetMyQuantity(tokenIds[rand]));
                     SendToChat(chatLink.ToString());
                 } else {
                     chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
-                    chatLink.Quantity = Convert.ToByte(quantity.Text);
+                    chatLink.Quantity = Convert.ToByte(await GetMyQuantity(chatLink.ItemId));
                     SendToChat(chatLink.ToString());
                 }
             };
-            var fadeIn = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 1.0f }, 0.2f);
+            sendButton.RightMouseButtonPressed += delegate {
+                sendButton.Size = new Point(22, 22);
+                sendButton.Location = new Point(rightBracket.Right + 3, 2);
+            };
+            var timeOutRightSend = new Dictionary<int, DateTimeOffset>();
+            sendButton.RightMouseButtonReleased += async delegate {
+                sendButton.Size = new Point(24, 24);
+                sendButton.Location = new Point(rightBracket.Right + 1, 0);
+
+                var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
+
+                if (randomizeButton.BackgroundColor == Color.LightGreen) {
+                    var selectWingIds = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
+                    var tokenIds = selectWingIds.Values.ToList();
+                    var rand = Randomizer.Next(0, tokenIds.Count);
+                    chatLink.ItemId = tokenIds[rand];
+
+                    if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId))
+                    {
+                        var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
+                        var kpName = TokenIdRepository.First(x => x.Value.Equals(chatLink.ItemId)).Key.Split('|').Reverse().ToList()[0].Trim();
+                        if (cooldown.TotalMinutes < 5)
+                        {
+                            ScreenNotification.ShowNotification($"{kpName} on cooldown: {(decimal)(300000 - cooldown.TotalMilliseconds) / 600:0:##}", ScreenNotification.NotificationType.Error);
+                            return;
+                        }
+                        timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
+                    } else {
+                        timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
+                    }
+
+                    chatLink.Quantity = Convert.ToByte(1);
+                    SendToChat($"Total: {await GetMyQuantity(chatLink.ItemId)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
+                } else {
+                    chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
+
+                    if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId)) {
+                        var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
+                        var kpName = TokenIdRepository.First(x => x.Value.Equals(chatLink.ItemId)).Key.Split('|').Reverse().ToList()[0].Trim();
+                        if (cooldown.TotalMinutes < 5)
+                        {
+                            ScreenNotification.ShowNotification($"{kpName} on cooldown: {(decimal)(300000 - cooldown.TotalMilliseconds) / 600:0:##}", ScreenNotification.NotificationType.Error);
+                            return;
+                        }
+                        timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
+                    } else {
+                        timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
+                    }
+
+                    chatLink.Quantity = Convert.ToByte(1);
+                    SendToChat($"Total: {await GetMyQuantity(chatLink.ItemId)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
+                }
+            };
             bgPanel.Disposed += delegate
             {
-                var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 0.0f}, 0.2f);
+                GameService.Animation.Tweener.TargetCancel(KillProofQuickMenu);
             };
             bgPanel.PropertyChanged += async delegate(object sender, PropertyChangedEventArgs e)
             {
                 if (!e.PropertyName.Equals("Visible", StringComparison.InvariantCultureIgnoreCase) ||
                     !bgPanel.Visible) return;
-                var value = await GetMyQuantity(dropdown.SelectedItem);
+                var value = await GetMyQuantity(TokenIdRepository[dropdown.SelectedItem]);
                 quantity.Text = value + "";
             };
             return bgPanel;
