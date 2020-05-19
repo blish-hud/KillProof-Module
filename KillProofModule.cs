@@ -1093,6 +1093,8 @@ namespace Nekres.KillProof {
                 sendButton.Size = new Point(24, 24);
                 sendButton.Location = new Point(rightBracket.Right + 1, 0);
 
+                if (MyKillProof == null) return;
+
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
                 if (randomizeButton.BackgroundColor == Color.LightGreen)
@@ -1118,6 +1120,8 @@ namespace Nekres.KillProof {
                 sendButton.Size = new Point(24, 24);
                 sendButton.Location = new Point(rightBracket.Right + 1, 0);
 
+                if (MyKillProof == null) return;
+
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
                 if (randomizeButton.BackgroundColor == Color.LightGreen) {
@@ -1130,9 +1134,12 @@ namespace Nekres.KillProof {
                     {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
                         var kpName = TokenIdRepository.First(x => x.Value.Equals(chatLink.ItemId)).Key.Split('|').Reverse().ToList()[0].Trim();
-                        if (cooldown.TotalMinutes < 5)
+                        if (cooldown.TotalMinutes < 2)
                         {
-                            ScreenNotification.ShowNotification($"{kpName} on cooldown: {(decimal)(300000 - cooldown.TotalMilliseconds) / 600:0:##}", ScreenNotification.NotificationType.Error);
+                            var timeLeft = TimeSpan.FromMinutes(2 - cooldown.TotalMinutes);
+                            var minuteWord = timeLeft.TotalSeconds > 119 ? $" {timeLeft:%m} minutes and" : timeLeft.TotalSeconds > 59 ? $" {timeLeft:%m} minute and" : "";
+                            var secondWord = timeLeft.Seconds > 9 ? $"{timeLeft:ss} seconds" : timeLeft.Seconds > 1 ? $"{timeLeft:%s} seconds" : $"{timeLeft:%s} second";
+                            ScreenNotification.ShowNotification($"You can't send your {kpName} total\nwithin the next{minuteWord} {secondWord} again.", ScreenNotification.NotificationType.Error);
                             return;
                         }
                         timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
@@ -1148,9 +1155,12 @@ namespace Nekres.KillProof {
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId)) {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
                         var kpName = TokenIdRepository.First(x => x.Value.Equals(chatLink.ItemId)).Key.Split('|').Reverse().ToList()[0].Trim();
-                        if (cooldown.TotalMinutes < 5)
+                        if (cooldown.TotalMinutes < 2)
                         {
-                            ScreenNotification.ShowNotification($"{kpName} on cooldown: {(decimal)(300000 - cooldown.TotalMilliseconds) / 600:0:##}", ScreenNotification.NotificationType.Error);
+                            var timeLeft = TimeSpan.FromMinutes(2 - cooldown.TotalMinutes);
+                            var minuteWord = timeLeft.TotalSeconds > 119 ? $" {timeLeft:%m} minutes and" : timeLeft.TotalSeconds > 59 ? $" {timeLeft:%m} minute and" : "";
+                            var secondWord = timeLeft.Seconds > 9 ? $"{timeLeft:ss} seconds" : timeLeft.Seconds > 1 ? $"{timeLeft:%s} seconds" : $"{timeLeft:%s} second";
+                            ScreenNotification.ShowNotification($"You can't send your {kpName} total\nwithin the next{minuteWord} {secondWord} again.", ScreenNotification.NotificationType.Error);
                             return;
                         }
                         timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
@@ -1164,7 +1174,7 @@ namespace Nekres.KillProof {
             };
             bgPanel.Disposed += delegate
             {
-                GameService.Animation.Tweener.TargetCancel(KillProofQuickMenu);
+                GameService.Animation.Tweener.TargetCancel(bgPanel);
             };
             bgPanel.PropertyChanged += async delegate(object sender, PropertyChangedEventArgs e)
             {
