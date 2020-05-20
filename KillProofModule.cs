@@ -139,7 +139,6 @@ namespace Nekres.KillProof {
             "W6",
             "W7"
         };
-        private Random Randomizer;
         private Dictionary<int, int> TokenQuantityRepository;
         [ImportingConstructor]
         public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
@@ -165,7 +164,6 @@ namespace Nekres.KillProof {
         }
 
         protected override void Initialize() {
-            Randomizer = new Random();
             TokenRenderRepository      = new Dictionary<string, AsyncTexture2D>(StringComparer.InvariantCultureIgnoreCase);
             EliteRenderRepository      = new Dictionary<uint, AsyncTexture2D>();
             ProfessionRenderRepository = new Dictionary<uint, AsyncTexture2D>();
@@ -1099,17 +1097,17 @@ namespace Nekres.KillProof {
                 {
                     var selectWingIds = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
                     var tokenIds = selectWingIds.Values.ToList();
-                    var rand = Randomizer.Next(0, tokenIds.Count);
+                    var rand = RandomUtil.GetRandom(0, tokenIds.Count);
                     chatLink.ItemId = tokenIds[rand];
                     var amount = await GetMyQuantity(chatLink.ItemId);
                     var rest = amount % 250;
-                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (Randomizer.Next(0,10) > 7 ? rest : 250) : amount);
+                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0,10) > 7 ? rest : 250) : amount);
                     SendToChat(chatLink.ToString());
                 } else {
                     chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
                     var amount = await GetMyQuantity(chatLink.ItemId);
                     var rest = amount % 250;
-                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (Randomizer.Next(0, 10) > 7 ? rest : 250) : amount);
+                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
                     SendToChat(chatLink.ToString());
                 }
             };
@@ -1129,7 +1127,7 @@ namespace Nekres.KillProof {
                 if (randomizeButton.BackgroundColor == Color.LightGreen) {
                     var selectWingIds = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
                     var tokenIds = selectWingIds.Values.ToList();
-                    var rand = Randomizer.Next(0, tokenIds.Count);
+                    var rand = RandomUtil.GetRandom(0, tokenIds.Count);
                     chatLink.ItemId = tokenIds[rand];
 
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId))
