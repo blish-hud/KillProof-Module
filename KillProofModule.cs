@@ -1097,7 +1097,7 @@ namespace Nekres.KillProof {
                 {
                     var selectWingIds = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
                     var tokenIds = selectWingIds.Values.ToList();
-                    var rand = RandomUtil.GetRandom(0, tokenIds.Count);
+                    var rand = RandomUtil.GetRandom(0, tokenIds.Count - 1);
                     chatLink.ItemId = tokenIds[rand];
                     var amount = await GetMyQuantity(chatLink.ItemId);
                     var rest = amount % 250;
@@ -1127,7 +1127,7 @@ namespace Nekres.KillProof {
                 if (randomizeButton.BackgroundColor == Color.LightGreen) {
                     var selectWingIds = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
                     var tokenIds = selectWingIds.Values.ToList();
-                    var rand = RandomUtil.GetRandom(0, tokenIds.Count);
+                    var rand = RandomUtil.GetRandom(0, tokenIds.Count - 1);
                     chatLink.ItemId = tokenIds[rand];
 
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId))
