@@ -1104,13 +1104,13 @@ namespace Nekres.KillProof {
 
                     var amount = await GetMyQuantity(tokenIds[rand]);
                     var rest = amount % 250;
-                    chatLink.Quantity = Convert.ToByte(amount > 250 ? Randomizer.Next(0,10) > 7 ? rest : 250 : amount);
+                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? Randomizer.Next(0,10) > 7 ? rest : 250 : amount);
                     SendToChat(chatLink.ToString());
                 } else {
                     chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
                     var amount = await GetMyQuantity(chatLink.ItemId);
                     var rest = amount % 250;
-                    chatLink.Quantity = Convert.ToByte(amount > 250 ? Randomizer.Next(0, 10) > 7 ? rest : 250 : amount);
+                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? Randomizer.Next(0, 10) > 7 ? rest : 250 : amount);
                     SendToChat(chatLink.ToString());
                 }
             };
