@@ -4,8 +4,10 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 
-namespace Nekres.KillProof.Controls {
-    public class KillProofButton : DetailsButton {
+namespace Nekres.KillProof.Controls
+{
+    public class KillProofButton : DetailsButton
+    {
         private const int DEFAULT_WIDTH = 327;
         private const int DEFAULT_HEIGHT = 100;
         private const int DEFAULT_BOTTOMSECTION_HEIGHT = 35;
@@ -16,9 +18,11 @@ namespace Nekres.KillProof.Controls {
         private readonly Texture2D SEPARATOR;
 
         private BitmapFont _font;
-        public BitmapFont Font {
+        public BitmapFont Font
+        {
             get => _font;
-            set {
+            set
+            {
                 if (_font == value) return;
 
                 _font = value;
@@ -27,18 +31,22 @@ namespace Nekres.KillProof.Controls {
         }
 
         private string _bottomText = "z";
-        public string BottomText {
+        public string BottomText
+        {
             get => _bottomText;
-            set {
+            set
+            {
                 if (_bottomText == value) return;
                 _bottomText = value;
             }
         }
 
         private bool _isTitleDisplay = false;
-        public bool IsTitleDisplay {
+        public bool IsTitleDisplay
+        {
             get => _isTitleDisplay;
-            set {
+            set
+            {
                 if (value == _isTitleDisplay) return;
                 _isTitleDisplay = value;
             }
@@ -46,7 +54,7 @@ namespace Nekres.KillProof.Controls {
 
         public KillProofButton() {
             this.ICON_TITLE = ICON_TITLE ?? KillProofModule.ModuleInstance._sortByTitleTexture;
-            this.BORDER_SPRITE = BORDER_SPRITE ?? Content.GetTexture(@"controls\detailsbutton\605003");
+            this.BORDER_SPRITE = BORDER_SPRITE ?? Content.GetTexture(@"controls/detailsbutton/605003");
             this.SEPARATOR = SEPARATOR ?? Content.GetTexture("157218");
             this.PIXEL = PIXEL ?? ContentService.Textures.Pixel;
 
