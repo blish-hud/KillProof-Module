@@ -7,7 +7,7 @@
 
   "description": "Check someone's kills for raiding. Uses ArcDPS Bridge service if available.\n\nPowered by www.killproof.me",
   "dependencies": {
-    "bh.blishhud": ">=0.5.0"
+    "bh.blishhud": ">=0.5.2"
   },
   "url": "https://killproof.me/",
   "author": {

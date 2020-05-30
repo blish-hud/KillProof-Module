@@ -23,7 +23,6 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using static Blish_HUD.Common.Gw2.Chat;
 using Color = Microsoft.Xna.Framework.Color;
 using Control = Blish_HUD.Controls.Control;
