@@ -7,7 +7,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{FEC31CE0-4539-4A1B-A633-78E3BDBD8C56}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Nekres.KillProof</RootNamespace>
+    <RootNamespace>KillProofModule</RootNamespace>
     <AssemblyName>KillProof Module</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

@@ -5,7 +5,7 @@ using Blish_HUD.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Nekres.KillProof.Controls
+namespace KillProofModule.Controls
 {
     public class PlayerNotification : Container
     {

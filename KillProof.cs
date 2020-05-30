@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Nekres.KillProof
+namespace KillProofModule
 {
     /// <summary>
     /// JSON class for replies from https://killproof.me/api/

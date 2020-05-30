@@ -11,7 +11,7 @@ using Gw2Sharp.Models;
 using Gw2Sharp.WebApi.V2.Models;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Nekres.KillProof.Controls;
+using KillProofModule.Controls;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -32,7 +32,7 @@ using MouseEventArgs = Blish_HUD.Input.MouseEventArgs;
 using Panel = Blish_HUD.Controls.Panel;
 using TextBox = Blish_HUD.Controls.TextBox;
 
-namespace Nekres.KillProof
+namespace KillProofModule
 {
 
     [Export(typeof(Module))]
