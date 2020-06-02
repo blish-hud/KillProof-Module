@@ -9,9 +9,9 @@ using Flurl;
 using Flurl.Http;
 using Gw2Sharp.Models;
 using Gw2Sharp.WebApi.V2.Models;
+using KillProofModule.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using KillProofModule.Controls;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -72,7 +72,7 @@ namespace KillProofModule
         private const int MAX_PLAYERS = 15;
 
         private const string KILLPROOF_API_URL = "https://killproof.me/api/";
-        private const string KILLPROOF_RESOURCES_URL = "https://killproof.me/resources.json";
+        //private const string KILLPROOF_RESOURCES_URL = "https://killproof.me/resources.json";
 
         private WindowTab KillProofTab;
 
