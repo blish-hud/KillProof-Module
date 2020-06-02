@@ -23,7 +23,6 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static Blish_HUD.Common.Gw2.Chat;
 using Color = Microsoft.Xna.Framework.Color;
 using Control = Blish_HUD.Controls.Control;
 using HorizontalAlignment = Blish_HUD.Controls.HorizontalAlignment;
@@ -73,6 +72,7 @@ namespace KillProofModule
         private const int MAX_PLAYERS = 15;
 
         private const string KILLPROOF_API_URL = "https://killproof.me/api/";
+        private const string KILLPROOF_RESOURCES_URL = "https://killproof.me/resources.json";
 
         private WindowTab KillProofTab;
 
@@ -1075,13 +1075,13 @@ namespace KillProofModule
                     var amount = GetMyQuantity(singleRandomToken.Key);
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
-                    Send(chatLink.ToString());
+                    GameService.GameIntegration.Chat.Send(chatLink.ToString());
                 } else {
                     chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
                     var amount = GetMyQuantity(dropdown.SelectedItem);
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
-                    Send(chatLink.ToString());
+                    GameService.GameIntegration.Chat.Send(chatLink.ToString());
                 }
             };
             sendButton.RightMouseButtonPressed += delegate {
@@ -1117,7 +1117,7 @@ namespace KillProofModule
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
                     chatLink.Quantity = Convert.ToByte(1);
-                    Send($"Total: {GetMyQuantity(singleRandomToken.Key)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
+                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(singleRandomToken.Key)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
                 } else {
                     chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
 
@@ -1136,7 +1136,7 @@ namespace KillProofModule
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
                     chatLink.Quantity = Convert.ToByte(1);
-                    Send($"Total: {GetMyQuantity(dropdown.SelectedItem)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
+                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(dropdown.SelectedItem)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
                 }
             };
             bgPanel.Disposed += delegate {
