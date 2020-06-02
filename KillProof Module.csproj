@@ -182,4 +182,9 @@
     <Error Condition="!Exists('packages\Fody.6.0.6\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Fody.6.0.6\build\Fody.targets'))" />
   </Target>
   <Import Project="packages\Fody.6.0.6\build\Fody.targets" Condition="Exists('packages\Fody.6.0.6\build\Fody.targets')" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties manifest_1json__JsonSchema="" />
+    </VisualStudio>
+  </ProjectExtensions>
 </Project>
