@@ -5,8 +5,10 @@ using Blish_HUD.Controls;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Nekres.KillProof.Controls {
-    public class PlayerNotification : Container {
+namespace KillProofModule.Controls
+{
+    public class PlayerNotification : Container
+    {
 
         private const int NOTIFICATION_WIDTH = 264;
         private const int NOTIFICATION_HEIGHT = 64;
@@ -79,7 +81,7 @@ namespace Nekres.KillProof.Controls {
         }
 
         private void Show(float duration) {
-            Content.PlaySoundEffectByName(@"audio\color-change");
+            Content.PlaySoundEffectByName(@"audio/color-change");
 
             Animation.Tweener
                      .Tween(this, new { Opacity = 1f }, 0.2f)

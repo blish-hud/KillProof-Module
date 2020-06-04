@@ -5,8 +5,10 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 
-namespace Nekres.KillProof.Controls {
-    public class PlayerButton : DetailsButton {
+namespace KillProofModule.Controls
+{
+    public class PlayerButton : DetailsButton
+    {
         private const int DEFAULT_WIDTH = 327;
         private const int DEFAULT_HEIGHT = 100;
         private const int DEFAULT_BOTTOMSECTION_HEIGHT = 35;
@@ -16,9 +18,11 @@ namespace Nekres.KillProof.Controls {
         private readonly Texture2D SEPARATOR;
 
         private BitmapFont _font;
-        public BitmapFont Font {
+        public BitmapFont Font
+        {
             get => _font;
-            set {
+            set
+            {
                 if (_font == value) return;
                 _font = value;
                 OnPropertyChanged();
@@ -26,18 +30,22 @@ namespace Nekres.KillProof.Controls {
         }
 
         private CommonFields.Player _player;
-        public CommonFields.Player Player {
+        public CommonFields.Player Player
+        {
             get => _player;
-            set {
+            set
+            {
                 _player = value;
                 OnPropertyChanged();
             }
         }
 
         private bool _isNew = true;
-        public bool IsNew {
+        public bool IsNew
+        {
             get => _isNew;
-            set {
+            set
+            {
                 if (_isNew == value) return;
                 _isNew = value;
                 OnPropertyChanged();
@@ -45,7 +53,7 @@ namespace Nekres.KillProof.Controls {
         }
 
         public PlayerButton() {
-            this.BORDER_SPRITE = BORDER_SPRITE ?? Content.GetTexture(@"controls\detailsbutton\605003");
+            this.BORDER_SPRITE = BORDER_SPRITE ?? Content.GetTexture(@"controls/detailsbutton/605003");
             this.SEPARATOR = SEPARATOR ?? Content.GetTexture("157218");
             this.PIXEL = PIXEL ?? ContentService.Textures.Pixel;
 

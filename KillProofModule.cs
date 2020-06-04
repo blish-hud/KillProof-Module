@@ -1,4 +1,20 @@
-﻿using System;
+﻿using Blish_HUD;
+using Blish_HUD.ArcDps.Common;
+using Blish_HUD.Content;
+using Blish_HUD.Controls;
+using Blish_HUD.Modules;
+using Blish_HUD.Modules.Managers;
+using Blish_HUD.Settings;
+using Flurl;
+using Flurl.Http;
+using Gw2Sharp.Models;
+using Gw2Sharp.WebApi.V2.Models;
+using KillProofModule.Controls;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
@@ -6,34 +22,21 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using Blish_HUD;
-using Blish_HUD.ArcDps.Common;
-using Blish_HUD.Content;
-using Blish_HUD.Controls;
-using Blish_HUD.Controls.Extern;
-using Blish_HUD.Controls.Intern;
-using Blish_HUD.Input;
-using Blish_HUD.Modules;
-using Blish_HUD.Modules.Managers;
-using Blish_HUD.Settings;
-using Flurl;
-using Flurl.Http;
-using Glide;
-using Gw2Sharp.Models;
-using Gw2Sharp.WebApi.V2.Models;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Nekres.KillProof.Controls;
 using Color = Microsoft.Xna.Framework.Color;
+using Control = Blish_HUD.Controls.Control;
+using HorizontalAlignment = Blish_HUD.Controls.HorizontalAlignment;
+using Label = Blish_HUD.Controls.Label;
+using MouseEventArgs = Blish_HUD.Input.MouseEventArgs;
+using Panel = Blish_HUD.Controls.Panel;
+using TextBox = Blish_HUD.Controls.TextBox;
 
-namespace Nekres.KillProof {
+namespace KillProofModule
+{
 
-    [Export(typeof(Blish_HUD.Modules.Module))]
-    public class KillProofModule : Blish_HUD.Modules.Module {
+    [Export(typeof(Module))]
+    public class KillProofModule : Module
+    {
 
         private static readonly Logger Logger = Logger.GetLogger(typeof(KillProofModule));
 
@@ -46,43 +49,45 @@ namespace Nekres.KillProof {
         internal Gw2ApiManager Gw2ApiManager => this.ModuleParameters.Gw2ApiManager;
         #endregion
 
-        private const int       TOP_MARGIN    = 0;
-        private const int       RIGHT_MARGIN  = 5;
-        private const int       BOTTOM_MARGIN = 10;
-        private const int       LEFT_MARGIN   = 8;
-        private       Point     LABEL_SMALL   = new Point(400, 30);
-        private       Point     LABEL_BIG     = new Point(400, 40);
+        private const int TOP_MARGIN = 0;
+        private const int RIGHT_MARGIN = 5;
+        private const int BOTTOM_MARGIN = 10;
+        private const int LEFT_MARGIN = 8;
+        private Point LABEL_SMALL = new Point(400, 30);
+        private Point LABEL_BIG = new Point(400, 40);
 
-        private const string SORTBY_ALL        = "Everything";
-        private const string SORTBY_KILLPROOF  = "KillProofs";
-        private const string SORTBY_TOKEN      = "Tokens";
-        private const string SORTBY_TITLE      = "Titles";
-        private const string SORTBY_RAID       = "Raid Titles";
-        private const string SORTBY_FRACTAL    = "Fractal Titles";
-        private       string CurrentSortMethod = SORTBY_ALL;
+        private const string SORTBY_ALL = "Everything";
+        private const string SORTBY_KILLPROOF = "KillProofs";
+        private const string SORTBY_TOKEN = "Tokens";
+        private const string SORTBY_TITLE = "Titles";
+        private const string SORTBY_RAID = "Raid Titles";
+        private const string SORTBY_FRACTAL = "Fractal Titles";
+        private string CurrentSortMethod = SORTBY_ALL;
 
         // Caches
         private Dictionary<string, AsyncTexture2D> TokenRenderRepository;
-        private Dictionary<uint, AsyncTexture2D>   EliteRenderRepository;
-        private Dictionary<uint, AsyncTexture2D>   ProfessionRenderRepository;
+        private Dictionary<uint, AsyncTexture2D> EliteRenderRepository;
+        private Dictionary<uint, AsyncTexture2D> ProfessionRenderRepository;
         // Max profile buttons on SquadPanel before dequeuing FiFo behavior.
         private const int MAX_PLAYERS = 15;
 
         private const string KILLPROOF_API_URL = "https://killproof.me/api/";
+        //private const string KILLPROOF_RESOURCES_URL = "https://killproof.me/resources.json";
 
         private WindowTab KillProofTab;
 
         private List<KillProof> CachedKillProofs;
-        private KillProof       CurrentProfile;
+        private KillProof CurrentProfile;
         private KillProof MyKillProof;
 
-        private Panel        SquadPanel;
+        private Panel SquadPanel;
         private PlayerButton LocalPlayerButton;
+        private Checkbox SmartPingCheckBox;
         private Panel KillProofQuickMenu;
 
         private SettingEntry<bool> KillProofQuickMenuEnabled;
 
-        private Queue<PlayerButton>   DisplayedPlayers;
+        private Queue<PlayerButton> DisplayedPlayers;
         private List<KillProofButton> DisplayedKillProofs;
 
         #region Cached Textures
@@ -101,7 +106,7 @@ namespace Nekres.KillProof {
         internal Texture2D _notificationBackroundTexture;
 
         #endregion
-        private static Dictionary<string, int> TokenIdRepository = new Dictionary<string, int>()
+        private static readonly Dictionary<string, int> TokenIdRepository = new Dictionary<string, int>()
         {
             {"Legendary Insight", 77302},
             {"Unstable Cosmic Essence", 81743},
@@ -129,7 +134,7 @@ namespace Nekres.KillProof {
             {"W7 | Cardinal Sabir's Token", 91270},
             {"W7 | Ether Djinn's Token", 91175}
         };
-        private static List<string> RaidWings = new List<string>()
+        private static readonly List<string> RaidWings = new List<string>()
         {
             "W1",
             "W2",
@@ -139,38 +144,36 @@ namespace Nekres.KillProof {
             "W6",
             "W7"
         };
-        private Dictionary<int, int> TokenQuantityRepository;
+        private Dictionary<string, int> MyTokenQuantityRepository;
         [ImportingConstructor]
         public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
 
-        protected override void DefineSettings(SettingCollection settings)
-        {
+        protected override void DefineSettings(SettingCollection settings) {
             KillProofQuickMenuEnabled = settings.DefineSetting("KillProofQuickMenuEnabled", false, "Kill Proof Quick Access Menu", "Quick access to ping kill proofs.");
         }
 
         private void LoadTextures() {
-            _killProofIconTexture   = ContentsManager.GetTexture("killproof_icon.png");
+            _killProofIconTexture = ContentsManager.GetTexture("killproof_icon.png");
             _killProofMeLogoTexture = ContentsManager.GetTexture("killproof_logo.png");
 
             _deletedItemTexture = ContentsManager.GetTexture("deleted_item.png");
 
             _sortByWorldBossesTexture = ContentsManager.GetTexture("world-bosses.png");
-            _sortByTokenTexture       = ContentsManager.GetTexture("icon_token.png");
-            _sortByTitleTexture       = ContentsManager.GetTexture("icon_title.png");
-            _sortByRaidTexture        = ContentsManager.GetTexture("icon_raid.png");
-            _sortByFractalTexture     = ContentsManager.GetTexture("icon_fractal.png");
+            _sortByTokenTexture = ContentsManager.GetTexture("icon_token.png");
+            _sortByTitleTexture = ContentsManager.GetTexture("icon_title.png");
+            _sortByRaidTexture = ContentsManager.GetTexture("icon_raid.png");
+            _sortByFractalTexture = ContentsManager.GetTexture("icon_fractal.png");
 
             _notificationBackroundTexture = ContentsManager.GetTexture("ns-button.png");
         }
 
         protected override void Initialize() {
-            TokenRenderRepository      = new Dictionary<string, AsyncTexture2D>(StringComparer.InvariantCultureIgnoreCase);
-            EliteRenderRepository      = new Dictionary<uint, AsyncTexture2D>();
+            TokenRenderRepository = new Dictionary<string, AsyncTexture2D>(StringComparer.InvariantCultureIgnoreCase);
+            EliteRenderRepository = new Dictionary<uint, AsyncTexture2D>();
             ProfessionRenderRepository = new Dictionary<uint, AsyncTexture2D>();
-            DisplayedKillProofs        = new List<KillProofButton>();
-            DisplayedPlayers           = new Queue<PlayerButton>();
-            CachedKillProofs           = new List<KillProof>();
-            TokenQuantityRepository    = new Dictionary<int, int>();
+            DisplayedKillProofs = new List<KillProofButton>();
+            DisplayedPlayers = new Queue<PlayerButton>();
+            CachedKillProofs = new List<KillProof>();
 
             if (KillProofQuickMenuEnabled.Value) { KillProofQuickMenu = BuildKillProofQuickMenu(); }
 
@@ -179,15 +182,14 @@ namespace Nekres.KillProof {
             GameService.ArcDps.Common.Activate();
         }
 
-        protected override async Task LoadAsync()
-        {
+        protected override async Task LoadAsync() {
             await Task.Run(LoadTokenIcons);
             await Task.Run(LoadProfessionIcons);
             await Task.Run(LoadEliteIcons);
         }
 
         protected override void OnModuleLoaded(EventArgs e) {
-            KillProofTab                          =  GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture, BuildHomePanel(GameService.Overlay.BlishHudWindow), 0);
+            KillProofTab = GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture, BuildHomePanel(GameService.Overlay.BlishHudWindow), 0);
             GameService.ArcDps.Common.PlayerAdded += PlayerAddedEvent;
 
             // Base handler must be called
@@ -195,15 +197,9 @@ namespace Nekres.KillProof {
         }
 
         protected override void Update(GameTime gameTime) {
-            if (GameService.ArcDps.RenderPresent && LocalPlayerButton != null && !LocalPlayerButton.Visible) {
-                LocalPlayerButton.Parent.Visible = true;
-                LocalPlayerButton.Visible        = true;
-            }
-
-            if (KillProofQuickMenu != null)
-            {
-                KillProofQuickMenu.Visible = GameService.GameIntegration.IsInGame && GameService.ArcDps.Common.PlayersInSquad.Count != 0;
-            }
+            if (LocalPlayerButton != null) LocalPlayerButton.Parent.Visible = GameService.ArcDps.RenderPresent;
+            if (SmartPingCheckBox != null) SmartPingCheckBox.Visible = GameService.ArcDps.RenderPresent;
+            if (KillProofQuickMenu != null) KillProofQuickMenu.Visible = GameService.GameIntegration.IsInGame && GameService.ArcDps.Common.PlayersInSquad.Count != 0 && MyTokenQuantityRepository != null;
         }
 
         private async Task<(bool, T)> GetJsonResponse<T>(string request) {
@@ -228,8 +224,7 @@ namespace Nekres.KillProof {
 
         private async Task<bool> IsLatestVersion() {
             (bool responseSuccess, var remoteManifest) = await GetJsonResponse<Manifest>("https://raw.githubusercontent.com/blish-hud/KillProof-Module/master/manifest.json");
-            if (responseSuccess)
-            {
+            if (responseSuccess) {
                 if (ModuleInstance.Version >= remoteManifest.Version) {
                     return true;
                 } else {
@@ -239,27 +234,6 @@ namespace Nekres.KillProof {
                 Logger.Info("Failed to check for new version.");
             }
             return false;
-        }
-        private void SendToChat(string message) {
-            ClipboardUtil.WindowsClipboardService.SetTextAsync(message)
-                .ContinueWith((clipboardResult) => {
-                    if (clipboardResult.IsFaulted)
-                        Logger.Warn(clipboardResult.Exception, "Failed to set clipboard text to {message}!",
-                            message);
-                    else
-                        Task.Run(() =>
-                        {
-                            Keyboard.Press(VirtualKeyShort.RETURN, true);
-                            Keyboard.Release(VirtualKeyShort.RETURN, true);
-                            Keyboard.Press(VirtualKeyShort.LCONTROL, true);
-                            Keyboard.Press(VirtualKeyShort.KEY_V, true);
-                            Thread.Sleep(50);
-                            Keyboard.Release(VirtualKeyShort.LCONTROL, true);
-                            Keyboard.Release(VirtualKeyShort.KEY_V, true);
-                            Keyboard.Press(VirtualKeyShort.RETURN, true);
-                            Keyboard.Release(VirtualKeyShort.RETURN, true);
-                        });
-                });
         }
         #region Render Getters
         private async void LoadTokenIcons() {
@@ -318,8 +292,7 @@ namespace Nekres.KillProof {
         }
         private async void LoadEliteIcons() {
             await GetJsonResponse<int[]>("https://api.guildwars2.com/v2/specializations").ContinueWith(
-                async response =>
-                {
+                async response => {
                     (bool responseSuccess, int[] specializations) = (response.Result.Item1, response.Result.Item2);
                     if (!responseSuccess) return;
                     foreach (var i in specializations)
@@ -364,16 +337,14 @@ namespace Nekres.KillProof {
         }
         private AsyncTexture2D GetEliteRender(CommonFields.Player player) {
             if (player.Elite == 0) { return GetProfessionRender(player); }
-            if (!EliteRenderRepository.Any(x => x.Key.Equals(player.Elite)))
-            {
+            if (!EliteRenderRepository.Any(x => x.Key.Equals(player.Elite))) {
                 var render = new AsyncTexture2D();
                 EliteRenderRepository.Add(player.Elite, render);
             }
             return EliteRenderRepository[player.Elite];
         }
         private AsyncTexture2D GetTokenRender(string key) {
-            if (!TokenRenderRepository.Any(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)))
-            {
+            if (!TokenRenderRepository.Any(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))) {
                 var render = new AsyncTexture2D();
                 TokenRenderRepository.Add(key, render);
             }
@@ -385,14 +356,14 @@ namespace Nekres.KillProof {
             if (CachedKillProofs.Any(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase))) {
                 return CachedKillProofs.FirstOrDefault(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase));
             } else {
-                    (bool responseSuccess, var killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}").ConfigureAwait(false);
+                (bool responseSuccess, var killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}").ConfigureAwait(false);
 
-                    if (responseSuccess && killProof?.error == null) {
-                        CachedKillProofs.Add(killProof);
-                        return killProof;
-                    } else {
-                        return null;
-                    }
+                if (responseSuccess && killProof?.error == null) {
+                    CachedKillProofs.Add(killProof);
+                    return killProof;
+                } else {
+                    return null;
+                }
             }
         }
 
@@ -405,12 +376,13 @@ namespace Nekres.KillProof {
         }
 
         private void PlayerAddedEvent(CommonFields.Player player) {
-            if (player.Self) {
+            if (player.Self && LocalPlayerButton != null) {
                 LocalPlayerButton.Player = player;
                 LocalPlayerButton.Icon = GetEliteRender(player);
                 LocalPlayerButton.LeftMouseButtonPressed += delegate {
                     GameService.Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(GameService.Overlay.BlishHudWindow, player));
                 };
+                if (MyKillProof == null) LoadMyKillProof();
                 return;
             }
 
@@ -456,40 +428,45 @@ namespace Nekres.KillProof {
                 Location = new Point(0, 0),
                 CanScroll = false
             };
-            var selfButtonPanel = new Panel() {
-                Parent = header,
-                Size = new Point(335, 114),
-                ShowBorder = true,
-                ShowTint = true,
-                Location = new Point(header.Right - 335 - KillProofModule.RIGHT_MARGIN, KillProofModule.TOP_MARGIN + 15),
-                Visible = GameService.ArcDps.RenderPresent
-            };
-            var killProofQuickAccess = new Checkbox()
-            {
-                Parent = header,
-                Location = new Point(selfButtonPanel.Location.X + LEFT_MARGIN, selfButtonPanel.Bottom),
-                Size = new Point(selfButtonPanel.Width, 30),
-                Text = "Show Quick Access Menu",
-                BasicTooltipText = "Shows a menu on the top left corner of your screen which allows you to quickly access and ping your killproofs.",
-                Checked = KillProofQuickMenuEnabled.Value
-            };
-            killProofQuickAccess.CheckedChanged += delegate(object sender, CheckChangedEvent e)
-            {
-                KillProofQuickMenuEnabled.Value = e.Checked;
-                if (e.Checked)
-                    KillProofQuickMenu = BuildKillProofQuickMenu();
-                else
-                    KillProofQuickMenu?.Dispose();
-            };
-            LocalPlayerButton = new PlayerButton() {
-                Parent = selfButtonPanel,
-                Player = new CommonFields.Player("You started Blish HUD while Guild Wars 2 was already running.", "Refresh map to see your profile.", 0, 0, true),
-                Icon = GameService.Content.GetTexture("733268"),
-                IsNew = false,
-                Location = new Point(0, 0),
-                Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
-                Visible = GameService.ArcDps.RenderPresent
-            };
+
+            if (GameService.ArcDps.Loaded) {
+                var selfButtonPanel = new Panel() {
+                    Parent = header,
+                    Size = new Point(335, 114),
+                    ShowBorder = true,
+                    ShowTint = true,
+                    Location =
+                        new Point(header.Right - 335 - KillProofModule.RIGHT_MARGIN, KillProofModule.TOP_MARGIN + 15)
+                };
+                SmartPingCheckBox = new Checkbox() {
+                    Parent = header,
+                    Location = new Point(selfButtonPanel.Location.X + LEFT_MARGIN, selfButtonPanel.Bottom),
+                    Size = new Point(selfButtonPanel.Width, 30),
+                    Text = "Show Smart Ping Menu",
+                    BasicTooltipText =
+                        "Shows a menu on the top left corner of your screen which allows you to quickly access and ping your killproofs.",
+                    Checked = KillProofQuickMenuEnabled.Value
+                };
+                SmartPingCheckBox.CheckedChanged += delegate (object sender, CheckChangedEvent e) {
+                    KillProofQuickMenuEnabled.Value = e.Checked;
+                    if (e.Checked)
+                        KillProofQuickMenu = BuildKillProofQuickMenu();
+                    else
+                        KillProofQuickMenu?.Dispose();
+                };
+                LocalPlayerButton = new PlayerButton() {
+                    Parent = selfButtonPanel,
+                    Player = new CommonFields.Player("You started Blish HUD while Guild Wars 2 was already running.",
+                        "Refresh map to see your profile.", 0, 0, true),
+                    Icon = GameService.Content.GetTexture("733268"),
+                    IsNew = false,
+                    Location = new Point(0, 0),
+                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
+                        ContentService.FontSize.Size16,
+                        ContentService.FontStyle.Regular)
+                };
+            }
+
             var img_killproof = new Image(_killProofMeLogoTexture) {
                 Parent = header,
                 Size = new Point(128, 128),
@@ -892,9 +869,9 @@ namespace Nekres.KillProof {
             DisplayedKillProofs.Clear();
 
             GetKillProofContent(player.AccountName).ContinueWith((kpResult) => {
-                 FinishLoadingKillProofPanel(wndw, hPanel, player, kpResult.Result);
-                 pageLoading.Dispose();
-             });
+                FinishLoadingKillProofPanel(wndw, hPanel, player, kpResult.Result);
+                pageLoading.Dispose();
+            });
 
             return hPanel;
         }
@@ -965,28 +942,28 @@ namespace Nekres.KillProof {
             }
         }
 
-        private async Task<int> GetMyQuantity(int tokenId)
+        private async void LoadMyKillProof()
         {
-            if (!GameService.ArcDps.Loaded || GameService.ArcDps.Common.PlayersInSquad.Count == 0) return 0;
+            var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
+            MyKillProof = await GetKillProofContent(player.AccountName);
+            var killproofs = MyKillProof.tokens.MergeLeft(MyKillProof.killproofs);
+            MyTokenQuantityRepository = new Dictionary<string, int>();
+            foreach (KeyValuePair<string, int> pair in killproofs)
+            {
+                var kpName = TokenIdRepository.FirstOrDefault(x => x.Key.Contains(pair.Key)).Key ?? pair.Key;
+                MyTokenQuantityRepository.Add(kpName, pair.Value);
+            }
+        }
+        private int GetMyQuantity(string token) {
+            if (!GameService.ArcDps.Loaded || GameService.ArcDps.Common.PlayersInSquad.Count == 0 || MyTokenQuantityRepository == null) return 0;
             try {
-                if (!TokenQuantityRepository.Any(x => x.Key.Equals(tokenId))) {
-                    if (MyKillProof == null) {
-                        var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
-                        MyKillProof = await GetKillProofContent(player.AccountName);
-                    }
-                    var kpName = TokenIdRepository.First(x => x.Value.Equals(tokenId)).Key.Split('|').Reverse().ToList()[0].Trim();
-                    var killproofs = MyKillProof.tokens.MergeLeft(MyKillProof.killproofs);
-                    var currentQuantity = killproofs.FirstOrDefault(x => x.Key.Equals(kpName));
-                    TokenQuantityRepository.Add(tokenId, currentQuantity.Equals(default) ? 1 : currentQuantity.Value);
-                }
-                return TokenQuantityRepository[tokenId];
+                return MyTokenQuantityRepository.Any(x => x.Key.Contains(token)) ? MyTokenQuantityRepository[token] : 0;
             } catch (KeyNotFoundException ex) {
                 Logger.Warn(ex.Message);
                 return 0;
             }
         }
-        private Panel BuildKillProofQuickMenu()
-        {
+        private Panel BuildKillProofQuickMenu() {
             var bgPanel = new Panel() {
                 Parent = GameService.Graphics.SpriteScreen,
                 Location = new Point(10, 38),
@@ -998,8 +975,7 @@ namespace Nekres.KillProof {
             bgPanel.Resized += delegate (object sender, ResizedEventArgs args) {
                 bgPanel.Location = new Point(10, 38);
             };
-            bgPanel.MouseEntered += delegate(object sender, MouseEventArgs e)
-            {
+            bgPanel.MouseEntered += delegate (object sender, MouseEventArgs e) {
                 var fadeIn = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 1.0f }, 0.45f);
             };
             var leftBracket = new Label() {
@@ -1038,9 +1014,8 @@ namespace Nekres.KillProof {
             foreach (KeyValuePair<string, int> pair in TokenIdRepository) {
                 dropdown.Items.Add(pair.Key);
             }
-            dropdown.ValueChanged += async delegate
-            {
-                var value = await GetMyQuantity(TokenIdRepository[dropdown.SelectedItem]);
+            dropdown.ValueChanged += async delegate {
+                var value = GetMyQuantity(dropdown.SelectedItem);
                 quantity.Text = value + "";
             };
             dropdown.SelectedItem = "Legendary Insight";
@@ -1093,22 +1068,20 @@ namespace Nekres.KillProof {
 
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
-                if (randomizeButton.BackgroundColor == Color.LightGreen)
-                {
-                    var selectWingIds = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
-                    var tokenIds = selectWingIds.Values.ToList();
-                    var rand = RandomUtil.GetRandom(0, tokenIds.Count - 1);
-                    chatLink.ItemId = tokenIds[rand];
-                    var amount = await GetMyQuantity(chatLink.ItemId);
-                    var rest = amount % 250;
-                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0,10) > 7 ? rest : 250) : amount);
-                    SendToChat(chatLink.ToString());
-                } else {
-                    chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
-                    var amount = await GetMyQuantity(chatLink.ItemId);
+                if (randomizeButton.BackgroundColor == Color.LightGreen) {
+                    var tokenSelection = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
+                    var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
+                    chatLink.ItemId = singleRandomToken.Value;
+                    var amount = GetMyQuantity(singleRandomToken.Key);
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
-                    SendToChat(chatLink.ToString());
+                    GameService.GameIntegration.Chat.Send(chatLink.ToString());
+                } else {
+                    chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
+                    var amount = GetMyQuantity(dropdown.SelectedItem);
+                    var rest = amount % 250;
+                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
+                    GameService.GameIntegration.Chat.Send(chatLink.ToString());
                 }
             };
             sendButton.RightMouseButtonPressed += delegate {
@@ -1125,17 +1098,14 @@ namespace Nekres.KillProof {
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
                 if (randomizeButton.BackgroundColor == Color.LightGreen) {
-                    var selectWingIds = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
-                    var tokenIds = selectWingIds.Values.ToList();
-                    var rand = RandomUtil.GetRandom(0, tokenIds.Count - 1);
-                    chatLink.ItemId = tokenIds[rand];
+                    var tokenSelection = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
+                    var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
+                    chatLink.ItemId = singleRandomToken.Value;
 
-                    if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId))
-                    {
+                    if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId)) {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
                         var kpName = TokenIdRepository.First(x => x.Value.Equals(chatLink.ItemId)).Key.Split('|').Reverse().ToList()[0].Trim();
-                        if (cooldown.TotalMinutes < 2)
-                        {
+                        if (cooldown.TotalMinutes < 2) {
                             var timeLeft = TimeSpan.FromMinutes(2 - cooldown.TotalMinutes);
                             var minuteWord = timeLeft.TotalSeconds > 119 ? $" {timeLeft:%m} minutes and" : timeLeft.TotalSeconds > 59 ? $" {timeLeft:%m} minute and" : "";
                             var secondWord = timeLeft.Seconds > 9 ? $"{timeLeft:ss} seconds" : timeLeft.Seconds > 1 ? $"{timeLeft:%s} seconds" : $"{timeLeft:%s} second";
@@ -1146,17 +1116,15 @@ namespace Nekres.KillProof {
                     } else {
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
-
                     chatLink.Quantity = Convert.ToByte(1);
-                    SendToChat($"Total: {await GetMyQuantity(chatLink.ItemId)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
+                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(singleRandomToken.Key)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
                 } else {
                     chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
 
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId)) {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
                         var kpName = TokenIdRepository.First(x => x.Value.Equals(chatLink.ItemId)).Key.Split('|').Reverse().ToList()[0].Trim();
-                        if (cooldown.TotalMinutes < 2)
-                        {
+                        if (cooldown.TotalMinutes < 2) {
                             var timeLeft = TimeSpan.FromMinutes(2 - cooldown.TotalMinutes);
                             var minuteWord = timeLeft.TotalSeconds > 119 ? $" {timeLeft:%m} minutes and" : timeLeft.TotalSeconds > 59 ? $" {timeLeft:%m} minute and" : "";
                             var secondWord = timeLeft.Seconds > 9 ? $"{timeLeft:ss} seconds" : timeLeft.Seconds > 1 ? $"{timeLeft:%s} seconds" : $"{timeLeft:%s} second";
@@ -1167,21 +1135,17 @@ namespace Nekres.KillProof {
                     } else {
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
-
                     chatLink.Quantity = Convert.ToByte(1);
-                    SendToChat($"Total: {await GetMyQuantity(chatLink.ItemId)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
+                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(dropdown.SelectedItem)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
                 }
             };
-            bgPanel.Disposed += delegate
-            {
+            bgPanel.Disposed += delegate {
                 var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 0.0f }, 0.2f);
             };
-            bgPanel.PropertyChanged += async delegate(object sender, PropertyChangedEventArgs e)
+            bgPanel.PropertyChanged += delegate(object sender, PropertyChangedEventArgs e)
             {
-                if (!e.PropertyName.Equals("Visible", StringComparison.InvariantCultureIgnoreCase) ||
-                    !bgPanel.Visible) return;
-                var value = await GetMyQuantity(TokenIdRepository[dropdown.SelectedItem]);
-                quantity.Text = value + "";
+                if (!bgPanel.Visible) return;
+                quantity.Text = GetMyQuantity(dropdown.SelectedItem).ToString();
             };
             return bgPanel;
         }
@@ -1190,7 +1154,8 @@ namespace Nekres.KillProof {
         #endregion
 
         /// <inheritdoc />
-        protected override void Unload() {
+        protected override void Unload()
+        {
             KillProofQuickMenu?.Dispose();
             SquadPanel?.Dispose();
             LocalPlayerButton?.Dispose();
