@@ -1,0 +1,397 @@
+[{
+	"raids": [{
+			"id": "general",
+			"token": [{
+					"id": 77302,
+					"name": "Legendary Insight",
+					"icon": "https://render.guildwars2.com/file/6D33B7387BAF2E2CC9B5D37D1D1B01246AB6FA22/1302744.png"
+				},
+				{
+					"id": 88485,
+					"name": "Legendary Divination",
+					"icon": "https://render.guildwars2.com/file/6E5318D426D1611F5A36ED5E7159DFAC7F911C04/2038674.png"
+				}
+			]
+		}, {
+			"id": "forsaken_thicket",
+			"wings": [{
+					"id": "spirit_vale",
+					"mapid": 1062,
+					"events": [{
+							"id": "vale_guardian",
+							"miniature": {
+								"id": 77334,
+								"icon": "https://render.guildwars2.com/file/1CCB9B3880B062465F9F5834F04739289AF27BBA/1301792.png"
+							},
+							"add_miniatures": [{
+								"id": 77370,
+								"icon": "https://render.guildwars2.com/file/45BABB397E15AF900EEA36AC7308DB0707C9D359/1301793.png"
+							}, {
+								"id": 77457,
+								"icon": "https://render.guildwars2.com/file/FB0D1F7F7F236E43701F0241976FDE0FD1B3671F/1301788.png"
+							}, {
+								"id": 77403,
+								"icon": "https://render.guildwars2.com/file/A5AF215E12C304F4E8F6EF4F0839FD094003BF03/1301785.png"
+							}],
+							"token": {
+								"name": "Vale Guardian Fragment",
+								"id": 77705,
+								"icon": "https://render.guildwars2.com/file/ABE7EE68247417D0BFEEE2DDDC015F066127597F/1341313.png"
+							}
+						},
+						{
+							"id": "gorseval",
+							"miniature": {
+								"id": 77296,
+								"icon": "https://render.guildwars2.com/file/E5074A6E5CE552A9231195202B45D5DA2C1A585E/1301787.png"
+							},
+							"token": {
+								"name": "Gorseval Tentacle Piece",
+								"id": 77751,
+								"icon": "https://render.guildwars2.com/file/031E307152EBF6041A2602B8ABE59B60EEC0A3A0/1341266.png"
+							}
+						},
+						{
+							"id": "sabetha",
+							"miniature": {
+								"id": 77339,
+								"icon": "https://render.guildwars2.com/file/1C96C03C385529A818E9E14ED7BB7E47F10154F5/1301795.png"
+							},
+							"add_miniatures": [{
+									"id": 77345,
+									"icon": "https://render.guildwars2.com/file/C87114B6E4EC38D8045B7DF0589DB037F0A9E551/1301789.png"
+								},
+								{
+									"id": 77385,
+									"icon": "https://render.guildwars2.com/file/D7E11B2126D3B64415CE01F8809EA119E86BA9C1/1301791.png"
+								},
+								{
+									"id": 77311,
+									"icon": "https://render.guildwars2.com/file/F05DBD0C06C3707BE479C407063EE7A5FE0EF5FC/1301790.png"
+								}
+							],
+							"token": {
+								"name": "Sabetha Flamethrower Fragment Piece",
+								"id": 77728,
+								"icon": "https://render.guildwars2.com/file/5BDD23F27E370B7FD87DA245B9A6699E7E0ED63F/1341335.png"
+							}
+						}
+					]
+				},
+
+				{
+					"id": "salvation_pass",
+					"mapid": 1149,
+					"events": [{
+							"id": "slothasor",
+							"miniature": {
+								"id": 77870,
+								"icon": "https://render.guildwars2.com/file/2370FE955AC49D38B99F2592F629D2B544BABBD2/1377392.png"
+							},
+							"add_miniatures": [{
+								"id": 77848,
+								"icon": "https://render.guildwars2.com/file/74C5E9AA0B163A297673040D02FB477552ED5A96/1377393.png"
+							}],
+							"token": {
+								"name": "Slothasor Mushroom",
+								"id": 77722,
+								"icon": "https://render.guildwars2.com/file/07D2F8C534312AB0D343AF21A32D08110AF9A7CA/1377340.png"
+							}
+						},
+						{
+							"id": "bandit_trio",
+							"add_miniatures": [{
+									"id": 78003,
+									"icon": "https://render.guildwars2.com/file/C15976032711E736FAB51FD0EDD9B6703A7CE543/1377388.png"
+								},
+								{
+									"id": 77859,
+									"icon": "https://render.guildwars2.com/file/15945F03F94119E344DDC921D34FAF49D85FAE95/1377390.png"
+								},
+								{
+									"id": 77820,
+									"icon": "https://render.guildwars2.com/file/A95E0E20EB6FDE9CBCEE667FF13BEAC2E80D594D/1377389.png"
+								}
+
+							]
+						},
+						{
+							"id": "matthias",
+							"miniature": {
+								"id": 77911,
+								"icon": "https://render.guildwars2.com/file/EBAFC4EA9C80F6D66AD9A427E15918E0172A476F/1377391.png"
+							},
+							"token": {
+								"name": "White Mantle Abomination Crystal",
+								"id": 77761,
+								"icon": "https://render.guildwars2.com/file/DD3B0624A0926608D9BB59DAB9C7079D5E3B3D97/1341406.png"
+							}
+						}
+					]
+				},
+				{
+					"id": "stronghold_of_the_faithful",
+					"mapid": 1156,
+					"events": [{
+							"id": "escort",
+							"miniature": {
+								"id": 78828,
+								"icon": "https://render.guildwars2.com/file/433A4E66794240AD463941F868754BB46D245020/1451172.png"
+							},
+							"token": {
+								"name": "Turret Fragment",
+								"id": 78873,
+								"icon": "https://render.guildwars2.com/file/BA4AF01864D19E3CC070484F12DF0B52DA1C0CC4/1451138.png"
+							}
+						},
+						{
+							"id": "keep_construct",
+							"miniature": {
+								"id": 78890,
+								"icon": "https://render.guildwars2.com/file/E87C6B0BB4C1D93231A4DB7CBE91157516580A3E/1451173.png"
+							},
+							"token": {
+								"name": "Keep Construct Rubble",
+								"id": 77761,
+								"icon": "https://render.guildwars2.com/file/6AD9295AF333352352C7B91260C646AD96F9C1A6/1451122.png"
+							}
+						},
+						{
+							"id": "xera",
+							"miniature": {
+								"id": 78815,
+								"icon": "https://render.guildwars2.com/file/551509B3B91270BFF016C020D2F9D99B550F93AA/1451174.png"
+							},
+							"token": {
+								"name": "Ribbon Scrap",
+								"id": 78942,
+								"icon": "https://render.guildwars2.com/file/9F51D5FBA24D5BE0A2BDFE9B96669B62F79843C7/1451140.png"
+							}
+						}
+					]
+				},
+				{
+					"id": "bastion_of_the_penitent",
+					"wings": [{
+						"id": "bastion_of_the_penitent",
+						"mapid": 1188,
+						"events": [{
+								"id": "cairn",
+								"miniature": {
+									"id": 80562,
+									"icon": "https://render.guildwars2.com/file/0863ADC609086A5E5F6C031DDC1766033432250C/1633961.png"
+								},
+								"token": {
+									"name": "Cairn Fragment",
+									"id": 80623,
+									"icon": "https://render.guildwars2.com/file/D7AC43DAD263F2BDF8ED4CF26EA7463FA134FDE8/1634864.png"
+								}
+							},
+							{
+								"id": "mursaat_overseer",
+								"miniature": {
+									"id": 80224,
+									"icon": "https://render.guildwars2.com/file/05FCD9D1B4959A051EEC3B160F0802FAB40C2619/1633963.png"
+								},
+								"add_miniatures": [{
+									"id": 80424,
+									"icon": "https://render.guildwars2.com/file/3E7702EEEF3478F6E4E0196472E216D25C54A701/1633962.png"
+								}],
+								"token": {
+									"name": "Recreation Room Floor Fragment",
+									"id": 80269,
+									"icon": "https://render.guildwars2.com/file/247830B00D4190345D0556CD9E0BBE1BDB629BFB/1634830.png"
+								}
+							},
+							{
+								"id": "samarog",
+								"miniature": {
+									"id": 80218,
+									"icon": "https://render.guildwars2.com/file/9645BE1925D1AC3E7177C99B740078F09EA5A739/1633967.png"
+								},
+								"token": {
+									"name": "Impaled Prisoner Token",
+									"id": 80087,
+									"icon": "https://render.guildwars2.com/file/4E40223E650CE2485C0E3F146863AEC7F7E3B923/1634889.png"
+								}
+							},
+							{
+								"id": "deimos",
+								"add_miniatures": [{
+									"id": 80327,
+									"icon": "https://render.guildwars2.com/file/03E57D1019181CE015C09BDA0601B7D34ECD3841/1633966.png"
+								}, {
+									"id": 80545,
+									"icon": "https://render.guildwars2.com/file/BB9F4D4535A836077A2A18BBC17C045A51B12DB0/1633965.png"
+								}],
+								"token": {
+									"name": "Fragment of Saul's Burden",
+									"id": 80189,
+									"icon": "https://render.guildwars2.com/file/BB7AC0B2FB23067DBC09C3A36B80B94FD2092ACE/1634875.png"
+								}
+							}
+						]
+					}]
+				}
+
+			]
+		},
+		{
+			"id": "hall_of_chains",
+			"wings": [{
+				"id": "hall_of_chains",
+				"mapid": 1264,
+				"events": [{
+						"id": "soulless_horror",
+						"miniature": {
+							"id": 86076,
+							"icon": "https://render.guildwars2.com/file/4FE00D4F52D0D8340CCCBAE824B7FD0109BE7E33/1894936.png"
+						},
+						"token": {
+							"name": "Desmina's Token",
+							"id": 85993,
+							"icon": "https://render.guildwars2.com/file/080EE3097B4457B406AD057367BEDBB79B1AD1D7/1894792.png"
+						}
+					},
+					{
+						"id": "river_of_souls",
+						"miniature": {
+							"id": 86076,
+							"icon": "https://render.guildwars2.com/file/4FE00D4F52D0D8340CCCBAE824B7FD0109BE7E33/1894936.png"
+						},
+						"token": {
+							"name": "River of Souls Token",
+							"id": 85785,
+							"icon": "https://render.guildwars2.com/file/53A9A17A23C1E29C1714773B0FDF1C41294FE50D/1894804.png"
+						}
+					},
+					{
+						"id": "statues_of_grenth",
+						"miniature": {
+							"id": 85667,
+							"icon": "https://render.guildwars2.com/file/712E5629410C91E6C0F95602F6621FDD000E7A34/1894935.png"
+						},
+						"token": {
+							"name": "Statue Token",
+							"id": 85800,
+							"icon": "https://render.guildwars2.com/file/D60F0721EC3AD122A2D4A47B68D50F355CE49303/1894800.png"
+						}
+					},
+					{
+						"id": "voice_in_the_void",
+						"miniature": {
+							"id": 85998,
+							"icon": "https://render.guildwars2.com/file/5C4FEBC890B4D9D2D6A96E4837CD4C0CFA605AB7/1894937.png"
+						},
+						"token": {
+							"name": "Dhuum's Token",
+							"id": 85633,
+							"icon": "https://render.guildwars2.com/file/2BB54BA422D3F3DA542A932BDB37A4AB17A6A6F3/1894796.png"
+						}
+					}
+				]
+			}]
+		},
+		{
+			"id": "mythwright_gambit",
+			"wings": [{
+				"id": "mythwright_gambit",
+				"mapid": 1303,
+				"events": [{
+						"id": "conjured_amalgamate",
+						"miniature": {
+							"id": 88963,
+							"icon": "https://render.guildwars2.com/file/B316A9FAA3275D0EF6D84A9179E062BF10C4545A/2038619.png"
+						},
+						"token": {
+							"name": "Conjured Amalgamate Token",
+							"id": 88543,
+							"icon": "https://render.guildwars2.com/file/BFBD0C321201AA240DCABE4D0ABE79FB923EDD5B/2039285.png"
+						}
+					},
+					{
+						"id": "twin_largos",
+						"add_miniatures": [{
+								"id": 88868,
+								"icon": "https://render.guildwars2.com/file/C5B29ACDAB73EC30571E12C30E4A5E030CCF0B4E/2038615.png"
+							},
+							{
+								"id": 88744,
+								"icon": "https://render.guildwars2.com/file/453C959040B6AF7F639FDD78367AF39FD7C73246/2038614.png"
+							}
+						],
+						"token": {
+							"name": "Twin Largos Token",
+							"id": 88860,
+							"icon": "https://render.guildwars2.com/file/1D1D51D3D2D863AF1E03A7237DEB0E5E2F08BB4F/2039309.png"
+						}
+					},
+					{
+						"id": "qadim",
+						"miniature": {
+							"id": 88587,
+							"icon": "https://render.guildwars2.com/file/64ED38CE4F549E573DA3CE641A15BCB3C4FB48B3/2038618.png"
+						},
+						"token": {
+							"name": "Qadim's Token",
+							"id": 88645,
+							"icon": "https://render.guildwars2.com/file/65B6A32142B6D4D267462965B9AE01DF54BC6027/2039317.png"
+						}
+					}
+				]
+			}]
+		},
+		{
+			"id": "the_key_of_ahdashim",
+			"wings": [{
+				"id": "the_key_of_ahdashim",
+				"mapid": 1323,
+				"events": [{
+						"id": "adina",
+						"miniature": {
+							"id": 91143,
+							"icon": "https://render.guildwars2.com/file/B79BC2FD11174B22F2CFE69DC54C727CB41F68B3/2155912.png"
+						},
+						"token": {
+							"name": "Cardinal Adina's Token",
+							"id": 91246,
+							"icon": "https://render.guildwars2.com/file/355D6C5065703E984F955ED60D9F17F32EACA2BD/2155902.png"
+						}
+					},
+					{
+						"id": "sabir",
+						"miniature": {
+							"id": 91148,
+							"icon": "https://render.guildwars2.com/file/A9AEBDAAA1D94F9DA41A4714C7464758D9EE3ED7/2155913.png"
+						},
+						"token": {
+							"name": "Cardinal Sabir's Token",
+							"id": 91270,
+							"icon": "https://render.guildwars2.com/file/B85B29E937B35E090B2921BC3B08B8F93D3B29CB/2155898.png"
+						}
+					},
+					{
+						"id": "qadim_the_peerless",
+						"miniature": {
+							"id": 91232,
+							"icon": "https://render.guildwars2.com/file/640241E807BF6D14447406C934F5D6FE144A0A4E/2155914.png"
+						},
+						"token": {
+							"name": "Ether Djinn's Token",
+							"id": 91175,
+							"icon": "https://render.guildwars2.com/file/4FC6B8B044DBCDF03B7A45CBC2A3551012751A13/2155906.png"
+						}
+					}
+				]
+			}]
+		}
+	],
+	"fractals": [{
+		"id": 100,
+		"token": {
+			"name": "Unstable Cosmic Essence",
+			"id": 81743,
+			"icon": "https://render.guildwars2.com/file/AD0AF3F321EB250B5FB4C44A7B3392CD1208921A/1202328.png"
+		}
+	}]
+}]
