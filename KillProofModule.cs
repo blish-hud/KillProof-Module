@@ -884,17 +884,23 @@ namespace KillProofModule
                     DisplayedKillProofs.Sort((e1, e2) => {
                         int result = e1.IsTitleDisplay.CompareTo(e2.IsTitleDisplay);
                         if (result != 0) return result;
-                        else return e1.BottomText.CompareTo(e2.BottomText);
+                        return e1.BottomText.CompareTo(e2.BottomText);
                     });
                     foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Visible = true; }
                     break;
                 case SORTBY_KILLPROOF:
                     DisplayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
-                    foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Visible = CurrentProfile.killproofs.Any(x => x.Key.Equals(e1.BottomText)); }
+                    foreach (KillProofButton e1 in DisplayedKillProofs)
+                    {
+                        e1.Visible = CurrentProfile.killproofs != null && CurrentProfile.killproofs.Any(x => x.Key.Equals(e1.BottomText));
+                    }
                     break;
                 case SORTBY_TOKEN:
                     DisplayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
-                    foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Visible = CurrentProfile.tokens.Any(x => x.Key.Equals(e1.BottomText)); }
+                    foreach (KillProofButton e1 in DisplayedKillProofs)
+                    {
+                        e1.Visible = CurrentProfile.tokens != null && CurrentProfile.tokens.Any(x => x.Key.Equals(e1.BottomText));
+                    }
                     break;
                 case SORTBY_TITLE:
                     DisplayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
@@ -902,11 +908,17 @@ namespace KillProofModule
                     break;
                 case SORTBY_FRACTAL:
                     DisplayedKillProofs.Sort((e1, e2) => e1.Text.CompareTo(e2.Text));
-                    foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Visible = e1.BottomText.ToLower().Contains("fractal"); }
+                    foreach (KillProofButton e1 in DisplayedKillProofs)
+                    {
+                        e1.Visible = e1.BottomText.ToLower().Contains("fractal");
+                    }
                     break;
                 case SORTBY_RAID:
                     DisplayedKillProofs.Sort((e1, e2) => e1.Text.CompareTo(e2.Text));
-                    foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Visible = e1.BottomText.ToLower().Contains("raid"); }
+                    foreach (KillProofButton e1 in DisplayedKillProofs)
+                    {
+                        e1.Visible = e1.BottomText.ToLower().Contains("raid");
+                    }
                     break;
                 default:
                     throw new NotSupportedException();
