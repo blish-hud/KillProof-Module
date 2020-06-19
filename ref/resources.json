@@ -107,7 +107,7 @@
                 "name": "Slothasor Mushroom",
                 "id": 77722,
                 "icon": "https://render.guildwars2.com/file/07D2F8C534312AB0D343AF21A32D08110AF9A7CA/1377340.png"
-              }
+              }     
             },
             {
               "id": "bandit_trio",
@@ -170,7 +170,7 @@
               ],
               "token": {
                 "name": "Keep Construct Rubble",
-                "id": 77761,
+                "id": 78905,
                 "icon": "https://render.guildwars2.com/file/6AD9295AF333352352C7B91260C646AD96F9C1A6/1451122.png"
               }
             },

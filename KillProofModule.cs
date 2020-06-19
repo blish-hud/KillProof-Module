@@ -231,7 +231,7 @@ namespace KillProofModule
                         Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
                     }
                 } else {
-                    TokenRenderRepository.Add(token.Id, GameService.Content.GetRenderServiceTexture(token.Icon));
+                    TokenRenderRepository.Add(token.Id, GameService.Content.GetRenderServiceTexture(renderUri));
                 }
             }
         }
@@ -686,8 +686,9 @@ namespace KillProofModule
 
                 if (currentAccount.killproofs != null) {
                     foreach (KeyValuePair<string, int> killproof in currentAccount.killproofs) {
-                        if (killproof.Value > 0) {
-                            var killProofButton = new KillProofButton() {
+                        if (killproof.Value > 0)
+                        {
+                            var killProofButton = new KillProofButton {
                                 Parent = contentPanel,
                                 Icon = GetTokenRender(_resources.GetToken(killproof.Key).Id),
                                 Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
@@ -705,8 +706,9 @@ namespace KillProofModule
 
                 if (currentAccount.tokens != null) {
                     foreach (KeyValuePair<string, int> token in currentAccount.tokens) {
-                        if (token.Value > 0) {
-                            var killProofButton = new KillProofButton() {
+                        if (token.Value > 0)
+                        {
+                            var killProofButton = new KillProofButton {
                                 Parent = contentPanel,
                                 Icon = GetTokenRender(_resources.GetToken(token.Key).Id),
                                 Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
@@ -724,7 +726,7 @@ namespace KillProofModule
 
                 if (currentAccount.titles != null) {
                     foreach (var token in currentAccount.titles) {
-                        var titleButton = new KillProofButton() {
+                        var titleButton = new KillProofButton {
                             Parent = contentPanel,
                             Font = GameService.Content.DefaultFont16,
                             Text = token.Key,
@@ -762,7 +764,7 @@ namespace KillProofModule
                     if (_displayedPlayers.Count == MAX_PLAYERS) { _displayedPlayers.Dequeue().Dispose(); }
 
                     var newPlayer = new CommonFields.Player(null, player.AccountName, 0, 0, false);
-                    var playerButton = new PlayerButton() {
+                    var playerButton = new PlayerButton {
                         Parent = _squadPanel,
                         Player = newPlayer,
                         Icon = GameService.Content.GetTexture("733268"),
@@ -954,6 +956,11 @@ namespace KillProofModule
                 return 0;
             }
         }
+        private KeyValuePair<Token, int> GetMyTokenQuantityPair(string name)
+        {
+            name = name.Split('|').Reverse().ToList()[0].Trim();
+            return _myTokenQuantityRepository.FirstOrDefault(x => x.Key.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
         private Panel BuildKillProofQuickMenu() {
             var bgPanel = new Panel() {
                 Parent = GameService.Graphics.SpriteScreen,
@@ -1078,9 +1085,10 @@ namespace KillProofModule
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
                     GameService.GameIntegration.Chat.Send(chatLink.ToString());
                 } else {
-                    var token = _resources.GetToken(dropdown.SelectedItem);
-                    chatLink.ItemId = token.Id;
-                    var amount = GetMyQuantity(token);
+                    var tokenQuantityPair = GetMyTokenQuantityPair(dropdown.SelectedItem);
+                    if (tokenQuantityPair.Equals(default) || tokenQuantityPair.Key == null) return;
+                    chatLink.ItemId = tokenQuantityPair.Key.Id;
+                    var amount = tokenQuantityPair.Value;
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
                     GameService.GameIntegration.Chat.Send(chatLink.ToString());
@@ -1104,7 +1112,6 @@ namespace KillProofModule
                     var tokenSelection = wing.GetTokens();
                     var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
                     chatLink.ItemId = singleRandomToken.Id;
-
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId)) {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
                         if (cooldown.TotalMinutes < 2) {
@@ -1122,16 +1129,16 @@ namespace KillProofModule
                     GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(singleRandomToken)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
                 } else
                 {
-                    var token = _resources.GetToken(dropdown.SelectedItem);
-                    chatLink.ItemId = token.Id;
-
+                    var tokenQuantityPair = GetMyTokenQuantityPair(dropdown.SelectedItem);
+                    if (tokenQuantityPair.Equals(default) || tokenQuantityPair.Key == null) return;
+                    chatLink.ItemId = tokenQuantityPair.Key.Id;
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId)) {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
                         if (cooldown.TotalMinutes < 2) {
                             var timeLeft = TimeSpan.FromMinutes(2 - cooldown.TotalMinutes);
                             var minuteWord = timeLeft.TotalSeconds > 119 ? $" {timeLeft:%m} minutes and" : timeLeft.TotalSeconds > 59 ? $" {timeLeft:%m} minute and" : "";
                             var secondWord = timeLeft.Seconds > 9 ? $"{timeLeft:ss} seconds" : timeLeft.Seconds > 1 ? $"{timeLeft:%s} seconds" : $"{timeLeft:%s} second";
-                            ScreenNotification.ShowNotification($"You can't send your {token.Name} total\nwithin the next{minuteWord} {secondWord} again.", ScreenNotification.NotificationType.Error);
+                            ScreenNotification.ShowNotification($"You can't send your {tokenQuantityPair.Key.Name} total\nwithin the next{minuteWord} {secondWord} again.", ScreenNotification.NotificationType.Error);
                             return;
                         }
                         timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
@@ -1139,7 +1146,7 @@ namespace KillProofModule
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(token)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
+                    GameService.GameIntegration.Chat.Send($"Total: {tokenQuantityPair.Value} of {chatLink} (killproof.me/{_myKillProof.kpid})");
                 }
             };
             bgPanel.Disposed += delegate {
