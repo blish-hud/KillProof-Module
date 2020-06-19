@@ -30,22 +30,22 @@ namespace KillProofModule.Persistance
         }
         public Wing GetWing(Token token)
         {
-            return GetAllWings().FirstOrDefault(wing => wing.Events.Any(encounters => encounters.Token.Equals(token)));
+            return GetAllWings().FirstOrDefault(wing => wing.Events.Where(encounter => encounter?.Token != null)
+                                .Any(encounters => encounters.Token.Equals(token)));
         }
         public IEnumerable<Wing> GetAllWings()
         {
-            return Raids.SelectMany(raid => raid.Wings).Where(wing => wing != null);
+            return Raids.Where(raid => raid != null).SelectMany(raid => raid.Wings).Where(wing => wing != null);
         }
         private IEnumerable<Event> GetAllEvents()
         {
-            return GetAllWings().SelectMany(wing => wing.Events);
+            return GetAllWings().Where(wing => wing.Events != null).SelectMany(wing => wing.Events);
         }
         public IEnumerable<Token> GetAllTokens()
         {
-            return GeneralTokens.Concat(GetAllEvents().Select(encounter => encounter.Token)
-                                .Concat(Fractals.Select(fractal => fractal.Token)))
-                                .Where(token => token != null)
-                                .GroupBy(token => token.Id).Select(g => g.First());
+            return GeneralTokens.Concat(GetAllEvents().Where(encounter => encounter.Token != null)
+                                .Select(encounter => encounter.Token))
+                                .Concat(Fractals.Where(fractal => fractal.Token != null).Select(fractal => fractal.Token));
         }
         public Token GetToken(int id)
         {
@@ -54,21 +54,15 @@ namespace KillProofModule.Persistance
         public Token GetToken(string name)
         {
             name = name.Split('|').Reverse().ToList()[0].Trim();
-            return GetAllTokens().FirstOrDefault(token => token.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return GetAllTokens().Where(token => token.Name != null).FirstOrDefault(token => token.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
         private IEnumerable<Miniature> GetAllMiniatures()
         {
-            return GetAllEvents().SelectMany(encounter => encounter.Miniatures)
-                                 .GroupBy(miniature => miniature.Id).Select(g => g.First());
+            return GetAllEvents().SelectMany(encounter => encounter.Miniatures);
         }
         public Event GetEvent(string id)
         {
             return GetAllEvents().FirstOrDefault(encounter => encounter.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
-        }
-        public Dictionary<int, string> GetRenderUrlRepository()
-        {
-            return GetAllTokens().ToDictionary(token => token.Id, token => token.Icon)
-                                 .MergeLeft(GetAllMiniatures().ToDictionary(miniature => miniature.Id, miniature => miniature.Icon));
         }
     }
     internal class Raid

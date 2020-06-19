@@ -213,25 +213,26 @@ namespace KillProofModule
         #region Render Getters
         private async void LoadTokenIcons()
         {
-            var tokenRenderUrlRepository = _resources.GetRenderUrlRepository();
-            foreach (var token in tokenRenderUrlRepository) {
-                    var renderUri = token.Value;
-                    if (TokenRenderRepository.Any(x => x.Key == token.Key)) {
-                        try {
-                            var textureDataResponse = await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
+            var tokenRenderUrlRepository = _resources.GetAllTokens();
+            foreach (var token in tokenRenderUrlRepository)
+            {
+                var renderUri = token.Icon;
+                if (TokenRenderRepository.Any(x => x.Key == token.Id)) {
+                    try {
+                        var textureDataResponse = await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
 
-                            using (var textureStream = new MemoryStream(textureDataResponse)) {
-                                var loadedTexture =
-                                    Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
+                        using (var textureStream = new MemoryStream(textureDataResponse)) {
+                            var loadedTexture =
+                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
 
-                                TokenRenderRepository[token.Key].SwapTexture(loadedTexture);
-                            }
-                        } catch (Exception ex) {
-                            Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                            TokenRenderRepository[token.Id].SwapTexture(loadedTexture);
                         }
-                    } else {
-                        TokenRenderRepository.Add(token.Key, GameService.Content.GetRenderServiceTexture(token.Value));
+                    } catch (Exception ex) {
+                        Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
                     }
+                } else {
+                    TokenRenderRepository.Add(token.Id, GameService.Content.GetRenderServiceTexture(token.Icon));
+                }
             }
         }
         private async Task<IReadOnlyList<Profession>> LoadProfessions() {

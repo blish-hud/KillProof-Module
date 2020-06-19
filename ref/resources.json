@@ -192,76 +192,71 @@
         },
         {
           "id": "bastion_of_the_penitent",
-          "wings": [
+          "mapid": 1188,
+          "events": [
             {
-              "id": "bastion_of_the_penitent",
-              "mapid": 1188,
-              "events": [
+              "id": "cairn",
+              "miniatures": [
                 {
-                  "id": "cairn",
-                  "miniatures": [
-                    {
-                      "id": 80562,
-                      "icon": "https://render.guildwars2.com/file/0863ADC609086A5E5F6C031DDC1766033432250C/1633961.png"
-                    }
-                  ],
-                  "token": {
-                    "name": "Cairn Fragment",
-                    "id": 80623,
-                    "icon": "https://render.guildwars2.com/file/D7AC43DAD263F2BDF8ED4CF26EA7463FA134FDE8/1634864.png"
-                  }
-                },
-                {
-                  "id": "mursaat_overseer",
-                  "miniatures": [
-                    {
-                      "id": 80224,
-                      "icon": "https://render.guildwars2.com/file/05FCD9D1B4959A051EEC3B160F0802FAB40C2619/1633963.png"
-                    },
-                    {
-                      "id": 80424,
-                      "icon": "https://render.guildwars2.com/file/3E7702EEEF3478F6E4E0196472E216D25C54A701/1633962.png"
-                    }
-                  ],
-                  "token": {
-                    "name": "Recreation Room Floor Fragment",
-                    "id": 80269,
-                    "icon": "https://render.guildwars2.com/file/247830B00D4190345D0556CD9E0BBE1BDB629BFB/1634830.png"
-                  }
-                },
-                {
-                  "id": "samarog",
-                  "miniatures": [
-                    {
-                      "id": 80218,
-                      "icon": "https://render.guildwars2.com/file/9645BE1925D1AC3E7177C99B740078F09EA5A739/1633967.png"
-                    }
-                  ],
-                  "token": {
-                    "name": "Impaled Prisoner Token",
-                    "id": 80087,
-                    "icon": "https://render.guildwars2.com/file/4E40223E650CE2485C0E3F146863AEC7F7E3B923/1634889.png"
-                  }
-                },
-                {
-                  "id": "deimos",
-                  "miniatures": [
-                    {
-                      "id": 80327,
-                      "icon": "https://render.guildwars2.com/file/03E57D1019181CE015C09BDA0601B7D34ECD3841/1633966.png"
-                    },
-                    {
-                      "id": 80545,
-                      "icon": "https://render.guildwars2.com/file/BB9F4D4535A836077A2A18BBC17C045A51B12DB0/1633965.png"
-                    }
-                  ],
-                  "token": {
-                    "name": "Fragment of Saul's Burden",
-                    "id": 80189,
-                    "icon": "https://render.guildwars2.com/file/BB7AC0B2FB23067DBC09C3A36B80B94FD2092ACE/1634875.png"
-                  }
+                  "id": 80562,
+                  "icon": "https://render.guildwars2.com/file/0863ADC609086A5E5F6C031DDC1766033432250C/1633961.png"
                 }
-              ]
+              ],
+              "token": {
+                "name": "Cairn Fragment",
+                "id": 80623,
+                "icon": "https://render.guildwars2.com/file/D7AC43DAD263F2BDF8ED4CF26EA7463FA134FDE8/1634864.png"
+              }
+            },
+            {
+              "id": "mursaat_overseer",
+              "miniatures": [
+                {
+                  "id": 80224,
+                  "icon": "https://render.guildwars2.com/file/05FCD9D1B4959A051EEC3B160F0802FAB40C2619/1633963.png"
+                },
+                {
+                  "id": 80424,
+                  "icon": "https://render.guildwars2.com/file/3E7702EEEF3478F6E4E0196472E216D25C54A701/1633962.png"
+                }
+              ],
+              "token": {
+                "name": "Recreation Room Floor Fragment",
+                "id": 80269,
+                "icon": "https://render.guildwars2.com/file/247830B00D4190345D0556CD9E0BBE1BDB629BFB/1634830.png"
+              }
+            },
+            {
+              "id": "samarog",
+              "miniatures": [
+                {
+                  "id": 80218,
+                  "icon": "https://render.guildwars2.com/file/9645BE1925D1AC3E7177C99B740078F09EA5A739/1633967.png"
+                }
+              ],
+              "token": {
+                "name": "Impaled Prisoner Token",
+                "id": 80087,
+                "icon": "https://render.guildwars2.com/file/4E40223E650CE2485C0E3F146863AEC7F7E3B923/1634889.png"
+              }
+            },
+            {
+              "id": "deimos",
+              "miniatures": [
+                {
+                  "id": 80327,
+                  "icon": "https://render.guildwars2.com/file/03E57D1019181CE015C09BDA0601B7D34ECD3841/1633966.png"
+                },
+                {
+                  "id": 80545,
+                  "icon": "https://render.guildwars2.com/file/BB9F4D4535A836077A2A18BBC17C045A51B12DB0/1633965.png"
+                }
+              ],
+              "token": {
+                "name": "Fragment of Saul's Burden",
+                "id": 80189,
+                "icon": "https://render.guildwars2.com/file/BB7AC0B2FB23067DBC09C3A36B80B94FD2092ACE/1634875.png"
+              }
             }
           ]
         }
