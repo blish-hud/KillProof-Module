@@ -10,10 +10,10 @@ using Flurl.Http;
 using Gw2Sharp.Models;
 using Gw2Sharp.WebApi.V2.Models;
 using KillProofModule.Controls;
+using KillProofModule.Persistance;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -66,29 +66,29 @@ namespace KillProofModule
 
         // Caches
         private Dictionary<string, AsyncTexture2D> TokenRenderRepository;
-        private Dictionary<uint, AsyncTexture2D> EliteRenderRepository;
-        private Dictionary<uint, AsyncTexture2D> ProfessionRenderRepository;
+        private Dictionary<int, AsyncTexture2D> EliteRenderRepository;
+        private Dictionary<int, AsyncTexture2D> ProfessionRenderRepository;
         // Max profile buttons on SquadPanel before dequeuing FiFo behavior.
         private const int MAX_PLAYERS = 15;
 
         private const string KILLPROOF_API_URL = "https://killproof.me/api/";
-        //private const string KILLPROOF_RESOURCES_URL = "https://killproof.me/resources.json";
+        private const string KILLPROOF_RESOURCES_URL = "https://killproof.me/resources.json";
 
-        private WindowTab KillProofTab;
+        private WindowTab _killProofTab;
 
-        private List<KillProof> CachedKillProofs;
-        private KillProof CurrentProfile;
-        private KillProof MyKillProof;
+        private List<KillProof> _cachedKillProofs;
+        private KillProof _currentProfile;
+        private KillProof _myKillProof;
 
-        private Panel SquadPanel;
-        private PlayerButton LocalPlayerButton;
-        private Checkbox SmartPingCheckBox;
-        private Panel KillProofQuickMenu;
+        private Panel _squadPanel;
+        private PlayerButton _localPlayerButton;
+        private Checkbox _smartPingCheckBox;
+        private Panel _killProofQuickMenu;
 
-        private SettingEntry<bool> KillProofQuickMenuEnabled;
+        private SettingEntry<bool> _killProofQuickMenuEnabled;
 
-        private Queue<PlayerButton> DisplayedPlayers;
-        private List<KillProofButton> DisplayedKillProofs;
+        private Queue<PlayerButton> _displayedPlayers;
+        private List<KillProofButton> _displayedKillProofs;
 
         #region Cached Textures
 
@@ -106,6 +106,8 @@ namespace KillProofModule
         internal Texture2D _notificationBackroundTexture;
 
         #endregion
+
+        private Resources _resources;
         private static readonly Dictionary<string, int> TokenIdRepository = new Dictionary<string, int>()
         {
             {"Legendary Insight", 77302},
@@ -149,7 +151,7 @@ namespace KillProofModule
         public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
 
         protected override void DefineSettings(SettingCollection settings) {
-            KillProofQuickMenuEnabled = settings.DefineSetting("KillProofQuickMenuEnabled", false, "Kill Proof Quick Access Menu", "Quick access to ping kill proofs.");
+            _killProofQuickMenuEnabled = settings.DefineSetting("KillProofQuickMenuEnabled", false, "Kill Proof Quick Access Menu", "Quick access to ping kill proofs.");
         }
 
         private void LoadTextures() {
@@ -169,27 +171,35 @@ namespace KillProofModule
 
         protected override void Initialize() {
             TokenRenderRepository = new Dictionary<string, AsyncTexture2D>(StringComparer.InvariantCultureIgnoreCase);
-            EliteRenderRepository = new Dictionary<uint, AsyncTexture2D>();
-            ProfessionRenderRepository = new Dictionary<uint, AsyncTexture2D>();
-            DisplayedKillProofs = new List<KillProofButton>();
-            DisplayedPlayers = new Queue<PlayerButton>();
-            CachedKillProofs = new List<KillProof>();
+            EliteRenderRepository = new Dictionary<int, AsyncTexture2D>();
+            ProfessionRenderRepository = new Dictionary<int, AsyncTexture2D>();
+            _displayedKillProofs = new List<KillProofButton>();
+            _displayedPlayers = new Queue<PlayerButton>();
+            _cachedKillProofs = new List<KillProof>();
 
-            if (KillProofQuickMenuEnabled.Value) { KillProofQuickMenu = BuildKillProofQuickMenu(); }
+            if (_killProofQuickMenuEnabled.Value) { _killProofQuickMenu = BuildKillProofQuickMenu(); }
 
             LoadTextures();
 
             GameService.ArcDps.Common.Activate();
         }
 
-        protected override async Task LoadAsync() {
+        protected override async Task LoadAsync()
+        {
+            var (responseSuccess, resources) = await GetJsonResponse<Resources>(KILLPROOF_RESOURCES_URL);
+            if (responseSuccess)
+            {
+                _resources = resources;
+                Logger.Info(_resources.Raids.First(x => x.Wings.First(y => y.Id.Equals("the_key_of_ahdashim")).Id.Equals("the_key_of_ahdashim")).ToString());
+            }
+
             await Task.Run(LoadTokenIcons);
             await Task.Run(LoadProfessionIcons);
             await Task.Run(LoadEliteIcons);
         }
 
         protected override void OnModuleLoaded(EventArgs e) {
-            KillProofTab = GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture, BuildHomePanel(GameService.Overlay.BlishHudWindow), 0);
+            _killProofTab = GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture, BuildHomePanel(GameService.Overlay.BlishHudWindow), 0);
             GameService.ArcDps.Common.PlayerAdded += PlayerAddedEvent;
 
             // Base handler must be called
@@ -197,9 +207,9 @@ namespace KillProofModule
         }
 
         protected override void Update(GameTime gameTime) {
-            if (LocalPlayerButton != null) LocalPlayerButton.Parent.Visible = GameService.ArcDps.RenderPresent;
-            if (SmartPingCheckBox != null) SmartPingCheckBox.Visible = GameService.ArcDps.RenderPresent;
-            if (KillProofQuickMenu != null) KillProofQuickMenu.Visible = GameService.GameIntegration.IsInGame && GameService.ArcDps.Common.PlayersInSquad.Count != 0 && MyTokenQuantityRepository != null;
+            if (_localPlayerButton != null) _localPlayerButton.Parent.Visible = GameService.ArcDps.RenderPresent;
+            if (_smartPingCheckBox != null) _smartPingCheckBox.Visible = GameService.ArcDps.RenderPresent;
+            if (_killProofQuickMenu != null) _killProofQuickMenu.Visible = GameService.GameIntegration.IsInGame && GameService.ArcDps.Common.PlayersInSquad.Count != 0 && MyTokenQuantityRepository != null;
         }
 
         private async Task<(bool, T)> GetJsonResponse<T>(string request) {
@@ -243,8 +253,7 @@ namespace KillProofModule
                     var renderUri = token.Value;
                     if (TokenRenderRepository.Any(x => x.Key == token.Key)) {
                         try {
-                            var textureDataResponse = await GameService.Gw2WebApi.AnonymousConnection.Client.Render
-                                .DownloadToByteArrayAsync(renderUri);
+                            var textureDataResponse = await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
 
                             using (var textureStream = new MemoryStream(textureDataResponse)) {
                                 var loadedTexture =
@@ -262,19 +271,17 @@ namespace KillProofModule
             }
         }
         private async Task<IReadOnlyList<Profession>> LoadProfessions() {
-            return await GameService.Gw2WebApi.AnonymousConnection.Client.V2.Professions
-                .ManyAsync(Enum.GetValues(typeof(ProfessionType)).Cast<ProfessionType>());
+            return await Gw2ApiManager.Gw2ApiClient.V2.Professions.ManyAsync(Enum.GetValues(typeof(ProfessionType)).Cast<ProfessionType>());
         }
         private async void LoadProfessionIcons() {
             var professions = await LoadProfessions();
             foreach (Profession profession in professions) {
                 var renderUri = (string)profession.IconBig;
-                var id = (uint)Enum.GetValues(typeof(ProfessionType)).Cast<ProfessionType>().ToList()
+                var id = (int)Enum.GetValues(typeof(ProfessionType)).Cast<ProfessionType>().ToList()
                                   .Find(x => x.ToString().Equals(profession.Id, StringComparison.InvariantCultureIgnoreCase));
                 if (ProfessionRenderRepository.Any(x => x.Key == id)) {
                     try {
-                        var textureDataResponse = await GameService.Gw2WebApi.AnonymousConnection.Client.Render
-                            .DownloadToByteArrayAsync(renderUri);
+                        var textureDataResponse = await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
 
                         using (var textureStream = new MemoryStream(textureDataResponse)) {
                             var loadedTexture =
@@ -291,75 +298,78 @@ namespace KillProofModule
             }
         }
         private async void LoadEliteIcons() {
-            await GetJsonResponse<int[]>("https://api.guildwars2.com/v2/specializations").ContinueWith(
-                async response => {
-                    (bool responseSuccess, int[] specializations) = (response.Result.Item1, response.Result.Item2);
-                    if (!responseSuccess) return;
-                    foreach (var i in specializations)
-                        await GetJsonResponse<JObject>("https://api.guildwars2.com/v2/specializations/" + i)
-                            .ContinueWith(
-                                async result => {
-                                    var jObj = (JObject)result.Result.Item2;
-                                    if (!(bool)jObj["elite"]) return;
-                                    var id = (uint)jObj["id"];
-                                    if (EliteRenderRepository.Any(x =>
-                                        x.Key == id)) {
-                                        var renderUri = (string)jObj["profession_icon_big"];
-                                        try {
-                                            var textureDataResponse = await GameService.Gw2WebApi.AnonymousConnection
-                                                .Client
-                                                .Render.DownloadToByteArrayAsync(renderUri);
+            var ids = await Gw2ApiManager.Gw2ApiClient.V2.Specializations.IdsAsync();
+            var specializations = await Gw2ApiManager.Gw2ApiClient.V2.Specializations.ManyAsync(ids);
+            foreach (Specialization specialization in specializations)
+            {
+                if (!specialization.Elite) continue;
+                if (EliteRenderRepository.Any(x => x.Key == specialization.Id))
+                {
+                    var renderUri = (string)specialization.ProfessionIconBig;
+                    try
+                    {
+                        var textureDataResponse = await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
 
-                                            using (var textureStream = new MemoryStream(textureDataResponse)) {
-                                                var loadedTexture =
-                                                    Texture2D.FromStream(GameService.Graphics.GraphicsDevice,
-                                                        textureStream);
+                        using (var textureStream = new MemoryStream(textureDataResponse))
+                        {
+                            var loadedTexture =
+                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice,
+                                    textureStream);
 
-                                                EliteRenderRepository[id].SwapTexture(loadedTexture);
-                                            }
-                                        } catch (Exception ex) {
-                                            Logger.Warn(ex, $"Request to render service for {renderUri} failed.",
-                                                renderUri);
-                                        }
-                                    } else {
-                                        EliteRenderRepository.Add(id, GameService.Content.GetRenderServiceTexture(
-                                            (string)jObj["profession_icon_big"]));
-                                    }
-                                });
-                });
+                            EliteRenderRepository[specialization.Id].SwapTexture(loadedTexture);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                    }
+                }
+                else
+                {
+                    EliteRenderRepository.Add(specialization.Id, GameService.Content.GetRenderServiceTexture(specialization.ProfessionIconBig));
+                }
+            }
         }
         private AsyncTexture2D GetProfessionRender(CommonFields.Player player) {
             if (!ProfessionRenderRepository.Any(x => x.Key.Equals(player.Profession))) {
                 var render = new AsyncTexture2D();
-                ProfessionRenderRepository.Add(player.Profession, render);
+                ProfessionRenderRepository.Add((int)player.Profession, render);
             }
-            return ProfessionRenderRepository[player.Profession];
+            return ProfessionRenderRepository[(int)player.Profession];
         }
         private AsyncTexture2D GetEliteRender(CommonFields.Player player) {
             if (player.Elite == 0) { return GetProfessionRender(player); }
             if (!EliteRenderRepository.Any(x => x.Key.Equals(player.Elite))) {
                 var render = new AsyncTexture2D();
-                EliteRenderRepository.Add(player.Elite, render);
+                try {
+                    EliteRenderRepository.Add((int)player.Elite, render);
+                } catch (ArgumentException e) {
+                    Logger.Warn(e.Message + e.StackTrace);
+                }
             }
-            return EliteRenderRepository[player.Elite];
+            return EliteRenderRepository[(int)player.Elite];
         }
         private AsyncTexture2D GetTokenRender(string key) {
             if (!TokenRenderRepository.Any(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))) {
                 var render = new AsyncTexture2D();
-                TokenRenderRepository.Add(key, render);
+                try {
+                    TokenRenderRepository.Add(key, render);
+                } catch (ArgumentException e) {
+                    Logger.Warn(e.Message + e.StackTrace);
+                }
             }
             return TokenRenderRepository[key];
         }
         #endregion
 
         private async Task<KillProof> GetKillProofContent(string account) {
-            if (CachedKillProofs.Any(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase))) {
-                return CachedKillProofs.FirstOrDefault(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase));
+            if (_cachedKillProofs.Any(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase))) {
+                return _cachedKillProofs.FirstOrDefault(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase));
             } else {
                 (bool responseSuccess, var killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}").ConfigureAwait(false);
 
                 if (responseSuccess && killProof?.error == null) {
-                    CachedKillProofs.Add(killProof);
+                    _cachedKillProofs.Add(killProof);
                     return killProof;
                 } else {
                     return null;
@@ -376,28 +386,28 @@ namespace KillProofModule
         }
 
         private void PlayerAddedEvent(CommonFields.Player player) {
-            if (player.Self && LocalPlayerButton != null) {
-                LocalPlayerButton.Player = player;
-                LocalPlayerButton.Icon = GetEliteRender(player);
-                LocalPlayerButton.LeftMouseButtonPressed += delegate {
+            if (player.Self && _localPlayerButton != null) {
+                _localPlayerButton.Player = player;
+                _localPlayerButton.Icon = GetEliteRender(player);
+                _localPlayerButton.LeftMouseButtonPressed += delegate {
                     GameService.Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(GameService.Overlay.BlishHudWindow, player));
                 };
-                if (MyKillProof == null) LoadMyKillProof();
+                if (_myKillProof == null) LoadMyKillProof();
                 return;
             }
 
-            if (DisplayedPlayers.Any(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase))
+            if (_displayedPlayers.Any(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase))
                 || !ProfileAvailable(player.AccountName).Result) { return; };
 
             PlayerNotification.ShowNotification(player.AccountName, GetEliteRender(player), "profile available", 10);
 
-            var optionalButton = DisplayedPlayers.FirstOrDefault(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase));
+            var optionalButton = _displayedPlayers.FirstOrDefault(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase));
 
             if (optionalButton == null) {
-                if (DisplayedPlayers.Count() == MAX_PLAYERS) { DisplayedPlayers.Dequeue().Dispose(); }
+                if (_displayedPlayers.Count() == MAX_PLAYERS) { _displayedPlayers.Dequeue().Dispose(); }
 
                 var playerButton = new PlayerButton() {
-                    Parent = SquadPanel,
+                    Parent = _squadPanel,
                     Player = player,
                     Icon = GetEliteRender(player),
                     Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular)
@@ -406,7 +416,7 @@ namespace KillProofModule
                     playerButton.IsNew = false;
                     GameService.Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(GameService.Overlay.BlishHudWindow, playerButton.Player));
                 };
-                DisplayedPlayers.Enqueue(playerButton);
+                _displayedPlayers.Enqueue(playerButton);
             } else {
                 optionalButton.Player = player;
                 optionalButton.Icon = GetEliteRender(player);
@@ -438,23 +448,23 @@ namespace KillProofModule
                     Location =
                         new Point(header.Right - 335 - KillProofModule.RIGHT_MARGIN, KillProofModule.TOP_MARGIN + 15)
                 };
-                SmartPingCheckBox = new Checkbox() {
+                _smartPingCheckBox = new Checkbox() {
                     Parent = header,
                     Location = new Point(selfButtonPanel.Location.X + LEFT_MARGIN, selfButtonPanel.Bottom),
                     Size = new Point(selfButtonPanel.Width, 30),
                     Text = "Show Smart Ping Menu",
                     BasicTooltipText =
                         "Shows a menu on the top left corner of your screen which allows you to quickly access and ping your killproofs.",
-                    Checked = KillProofQuickMenuEnabled.Value
+                    Checked = _killProofQuickMenuEnabled.Value
                 };
-                SmartPingCheckBox.CheckedChanged += delegate (object sender, CheckChangedEvent e) {
-                    KillProofQuickMenuEnabled.Value = e.Checked;
+                _smartPingCheckBox.CheckedChanged += delegate (object sender, CheckChangedEvent e) {
+                    _killProofQuickMenuEnabled.Value = e.Checked;
                     if (e.Checked)
-                        KillProofQuickMenu = BuildKillProofQuickMenu();
+                        _killProofQuickMenu = BuildKillProofQuickMenu();
                     else
-                        KillProofQuickMenu?.Dispose();
+                        _killProofQuickMenu?.Dispose();
                 };
-                LocalPlayerButton = new PlayerButton() {
+                _localPlayerButton = new PlayerButton() {
                     Parent = selfButtonPanel,
                     Player = new CommonFields.Player("You started Blish HUD while Guild Wars 2 was already running.",
                         "Refresh map to see your profile.", 0, 0, true),
@@ -537,7 +547,7 @@ namespace KillProofModule
             /// ###################
             ///      </FOOTER>
             /// ###################
-            SquadPanel = new Panel() {
+            _squadPanel = new Panel() {
                 Parent = hPanel,
                 Size = new Point(header.Size.X, hPanel.Height - header.Height - footer.Height),
                 Location = new Point(0, header.Bottom),
@@ -720,7 +730,7 @@ namespace KillProofModule
                                 BottomText = killproof.Key
                             };
 
-                            DisplayedKillProofs.Add(killProofButton);
+                            _displayedKillProofs.Add(killProofButton);
                         }
                     }
                 } else {
@@ -739,7 +749,7 @@ namespace KillProofModule
                                 BottomText = token.Key
                             };
 
-                            DisplayedKillProofs.Add(killProofButton);
+                            _displayedKillProofs.Add(killProofButton);
                         }
                     }
                 } else {
@@ -772,7 +782,7 @@ namespace KillProofModule
                                 break;
                         }
 
-                        DisplayedKillProofs.Add(titleButton);
+                        _displayedKillProofs.Add(titleButton);
                     }
                 } else {
                     // TODO: Show button indicating that titles were explicitly hidden
@@ -781,14 +791,14 @@ namespace KillProofModule
 
                 RepositionKillProofs();
 
-                if (!player.Self && !player.AccountName.Equals(LocalPlayerButton.Player.AccountName, StringComparison.InvariantCultureIgnoreCase)
-                    && !DisplayedPlayers.Any(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase))) {
+                if (!player.Self && !player.AccountName.Equals(_localPlayerButton.Player.AccountName, StringComparison.InvariantCultureIgnoreCase)
+                    && !_displayedPlayers.Any(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase))) {
 
-                    if (DisplayedPlayers.Count == MAX_PLAYERS) { DisplayedPlayers.Dequeue().Dispose(); }
+                    if (_displayedPlayers.Count == MAX_PLAYERS) { _displayedPlayers.Dequeue().Dispose(); }
 
                     var new_player = new CommonFields.Player(null, player.AccountName, 0, 0, false);
                     var playerButton = new PlayerButton() {
-                        Parent = SquadPanel,
+                        Parent = _squadPanel,
                         Player = new_player,
                         Icon = GameService.Content.GetTexture("733268"),
                         Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
@@ -797,7 +807,7 @@ namespace KillProofModule
                     playerButton.LeftMouseButtonPressed += delegate {
                         GameService.Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(GameService.Overlay.BlishHudWindow, player));
                     };
-                    DisplayedPlayers.Enqueue(playerButton);
+                    _displayedPlayers.Enqueue(playerButton);
                 }
 
             } else {
@@ -830,7 +840,7 @@ namespace KillProofModule
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Middle
                 };
-                if (!player.Self && !player.AccountName.Equals(LocalPlayerButton.Player.AccountName, StringComparison.InvariantCultureIgnoreCase)) {
+                if (!player.Self && !player.AccountName.Equals(_localPlayerButton.Player.AccountName, StringComparison.InvariantCultureIgnoreCase)) {
                     lab_nothingHere.Text = "No profile for \"" + player.AccountName + "\" found :(";
                     lab_visitUs.Text = "\n\nPlease, share www.killproof.me with this player and help expand our database.";
                 }
@@ -845,12 +855,12 @@ namespace KillProofModule
 
             backButton.LeftMouseButtonReleased += delegate {
                 wndw.NavigateHome();
-                wndw.ActivePanel = GameService.Overlay.BlishHudWindow.Panels[KillProofTab];
+                wndw.ActivePanel = GameService.Overlay.BlishHudWindow.Panels[_killProofTab];
                 RepositionPlayers();
                 hPanel.Dispose();
             };
 
-            CurrentProfile = currentAccount;
+            _currentProfile = currentAccount;
         }
 
         public Panel BuildKillProofPanel(WindowBase wndw, CommonFields.Player player) {
@@ -865,8 +875,8 @@ namespace KillProofModule
 
             pageLoading.Location = new Point(hPanel.Size.X / 2 - pageLoading.Size.X / 2, hPanel.Size.Y / 2 - pageLoading.Size.Y / 2);
 
-            foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Dispose(); }
-            DisplayedKillProofs.Clear();
+            foreach (KillProofButton e1 in _displayedKillProofs) { e1.Dispose(); }
+            _displayedKillProofs.Clear();
 
             GetKillProofContent(player.AccountName).ContinueWith((kpResult) => {
                 FinishLoadingKillProofPanel(wndw, hPanel, player, kpResult.Result);
@@ -881,41 +891,41 @@ namespace KillProofModule
             }
             switch (CurrentSortMethod) {
                 case SORTBY_ALL:
-                    DisplayedKillProofs.Sort((e1, e2) => {
+                    _displayedKillProofs.Sort((e1, e2) => {
                         int result = e1.IsTitleDisplay.CompareTo(e2.IsTitleDisplay);
                         if (result != 0) return result;
                         return e1.BottomText.CompareTo(e2.BottomText);
                     });
-                    foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Visible = true; }
+                    foreach (KillProofButton e1 in _displayedKillProofs) { e1.Visible = true; }
                     break;
                 case SORTBY_KILLPROOF:
-                    DisplayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
-                    foreach (KillProofButton e1 in DisplayedKillProofs)
+                    _displayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
+                    foreach (KillProofButton e1 in _displayedKillProofs)
                     {
-                        e1.Visible = CurrentProfile.killproofs != null && CurrentProfile.killproofs.Any(x => x.Key.Equals(e1.BottomText));
+                        e1.Visible = _currentProfile.killproofs != null && _currentProfile.killproofs.Any(x => x.Key.Equals(e1.BottomText));
                     }
                     break;
                 case SORTBY_TOKEN:
-                    DisplayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
-                    foreach (KillProofButton e1 in DisplayedKillProofs)
+                    _displayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
+                    foreach (KillProofButton e1 in _displayedKillProofs)
                     {
-                        e1.Visible = CurrentProfile.tokens != null && CurrentProfile.tokens.Any(x => x.Key.Equals(e1.BottomText));
+                        e1.Visible = _currentProfile.tokens != null && _currentProfile.tokens.Any(x => x.Key.Equals(e1.BottomText));
                     }
                     break;
                 case SORTBY_TITLE:
-                    DisplayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
-                    foreach (KillProofButton e1 in DisplayedKillProofs) { e1.Visible = e1.IsTitleDisplay; }
+                    _displayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
+                    foreach (KillProofButton e1 in _displayedKillProofs) { e1.Visible = e1.IsTitleDisplay; }
                     break;
                 case SORTBY_FRACTAL:
-                    DisplayedKillProofs.Sort((e1, e2) => e1.Text.CompareTo(e2.Text));
-                    foreach (KillProofButton e1 in DisplayedKillProofs)
+                    _displayedKillProofs.Sort((e1, e2) => e1.Text.CompareTo(e2.Text));
+                    foreach (KillProofButton e1 in _displayedKillProofs)
                     {
                         e1.Visible = e1.BottomText.ToLower().Contains("fractal");
                     }
                     break;
                 case SORTBY_RAID:
-                    DisplayedKillProofs.Sort((e1, e2) => e1.Text.CompareTo(e2.Text));
-                    foreach (KillProofButton e1 in DisplayedKillProofs)
+                    _displayedKillProofs.Sort((e1, e2) => e1.Text.CompareTo(e2.Text));
+                    foreach (KillProofButton e1 in _displayedKillProofs)
                     {
                         e1.Visible = e1.BottomText.ToLower().Contains("raid");
                     }
@@ -927,7 +937,7 @@ namespace KillProofModule
         }
         private void RepositionKillProofs() {
             int pos = 0;
-            foreach (KillProofButton e in DisplayedKillProofs) {
+            foreach (KillProofButton e in _displayedKillProofs) {
                 int x = pos % 3;
                 int y = pos / 3;
                 e.Location = new Point(x * (e.Width + 8), y * (e.Height + 8));
@@ -938,7 +948,7 @@ namespace KillProofModule
             }
         }
         private void RepositionPlayers() {
-            var sorted = from player in DisplayedPlayers
+            var sorted = from player in _displayedPlayers
                          orderby player.IsNew descending
                          select player;
 
@@ -957,8 +967,8 @@ namespace KillProofModule
         private async void LoadMyKillProof()
         {
             var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
-            MyKillProof = await GetKillProofContent(player.AccountName);
-            var killproofs = MyKillProof.tokens.MergeLeft(MyKillProof.killproofs);
+            _myKillProof = await GetKillProofContent(player.AccountName);
+            var killproofs = _myKillProof.tokens.MergeLeft(_myKillProof.killproofs);
             MyTokenQuantityRepository = new Dictionary<string, int>();
             foreach (KeyValuePair<string, int> pair in killproofs)
             {
@@ -1076,7 +1086,7 @@ namespace KillProofModule
                 sendButton.Size = new Point(24, 24);
                 sendButton.Location = new Point(rightBracket.Right + 1, 0);
 
-                if (MyKillProof == null) return;
+                if (_myKillProof == null) return;
 
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
@@ -1105,7 +1115,7 @@ namespace KillProofModule
                 sendButton.Size = new Point(24, 24);
                 sendButton.Location = new Point(rightBracket.Right + 1, 0);
 
-                if (MyKillProof == null) return;
+                if (_myKillProof == null) return;
 
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
@@ -1129,7 +1139,7 @@ namespace KillProofModule
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(singleRandomToken.Key)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
+                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(singleRandomToken.Key)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
                 } else {
                     chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
 
@@ -1148,7 +1158,7 @@ namespace KillProofModule
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(dropdown.SelectedItem)} of {chatLink} (killproof.me/{MyKillProof.kpid})");
+                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(dropdown.SelectedItem)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
                 }
             };
             bgPanel.Disposed += delegate {
@@ -1168,11 +1178,11 @@ namespace KillProofModule
         /// <inheritdoc />
         protected override void Unload()
         {
-            KillProofQuickMenu?.Dispose();
-            SquadPanel?.Dispose();
-            LocalPlayerButton?.Dispose();
-            foreach (KillProofButton c in DisplayedKillProofs) c?.Dispose();
-            GameService.Overlay.BlishHudWindow.RemoveTab(KillProofTab);
+            _killProofQuickMenu?.Dispose();
+            _squadPanel?.Dispose();
+            _localPlayerButton?.Dispose();
+            foreach (KillProofButton c in _displayedKillProofs) c?.Dispose();
+            GameService.Overlay.BlishHudWindow.RemoveTab(_killProofTab);
             // All static members must be manually unset
             ModuleInstance = null;
         }
