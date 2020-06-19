@@ -65,7 +65,7 @@ namespace KillProofModule
         private string CurrentSortMethod = SORTBY_ALL;
 
         // Caches
-        private Dictionary<string, AsyncTexture2D> TokenRenderRepository;
+        private Dictionary<int, AsyncTexture2D> TokenRenderRepository;
         private Dictionary<int, AsyncTexture2D> EliteRenderRepository;
         private Dictionary<int, AsyncTexture2D> ProfessionRenderRepository;
         // Max profile buttons on SquadPanel before dequeuing FiFo behavior.
@@ -108,45 +108,9 @@ namespace KillProofModule
         #endregion
 
         private Resources _resources;
-        private static readonly Dictionary<string, int> TokenIdRepository = new Dictionary<string, int>()
-        {
-            {"Legendary Insight", 77302},
-            {"Unstable Cosmic Essence", 81743},
-            {"Legendary Divination", 88485},
-            {"W1 | Vale Guardian Fragment", 77705},
-            {"W1 | Gorseval Tentacle Piece", 77751},
-            {"W1 | Sabetha Flamethrower Fragment Piece", 77728},
-            {"W2 | Slothasor Mushroom", 77722},
-            {"W2 | White Mantle Abomination Crystal", 77761},
-            {"W3 | Turret Fragment", 78873},
-            {"W3 | Keep Construct Rubble", 78905},
-            {"W3 | Ribbon Scrap", 78942},
-            {"W4 | Cairn Fragment", 80623},
-            {"W4 | Recreation Room Floor Fragment",  80269},
-            {"W4 | Impaled Prisoner Token", 80087},
-            {"W4 | Fragment of Saul's Burden", 80189},
-            {"W5 | Desmina's Token", 85993},
-            {"W5 | River of Souls Token", 85785},
-            {"W5 | Statue Token", 85800},
-            {"W5 | Dhuum's Token", 85633},
-            {"W6 | Conjured Amalgamate Token", 88543},
-            {"W6 | Twin Largos Token", 88860},
-            {"W6 | Qadim's Token", 88645},
-            {"W7 | Cardinal Adina's Token", 91246},
-            {"W7 | Cardinal Sabir's Token", 91270},
-            {"W7 | Ether Djinn's Token", 91175}
-        };
-        private static readonly List<string> RaidWings = new List<string>()
-        {
-            "W1",
-            "W2",
-            "W3",
-            "W4",
-            "W5",
-            "W6",
-            "W7"
-        };
-        private Dictionary<string, int> MyTokenQuantityRepository;
+
+        private Dictionary<Token, int> _myTokenQuantityRepository;
+
         [ImportingConstructor]
         public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
 
@@ -170,14 +134,12 @@ namespace KillProofModule
         }
 
         protected override void Initialize() {
-            TokenRenderRepository = new Dictionary<string, AsyncTexture2D>(StringComparer.InvariantCultureIgnoreCase);
+            TokenRenderRepository = new Dictionary<int, AsyncTexture2D>();
             EliteRenderRepository = new Dictionary<int, AsyncTexture2D>();
             ProfessionRenderRepository = new Dictionary<int, AsyncTexture2D>();
             _displayedKillProofs = new List<KillProofButton>();
             _displayedPlayers = new Queue<PlayerButton>();
             _cachedKillProofs = new List<KillProof>();
-
-            if (_killProofQuickMenuEnabled.Value) { _killProofQuickMenu = BuildKillProofQuickMenu(); }
 
             LoadTextures();
 
@@ -186,17 +148,17 @@ namespace KillProofModule
 
         protected override async Task LoadAsync()
         {
-            var (responseSuccess, resources) = await GetJsonResponse<Resources>("https://raw.githubusercontent.com/blish-hud/KillProof-Module/resources/ref/resources.json");
-            if (responseSuccess)
-            {
-                _resources = resources;
-                Logger.Info(string.Join("\n",
-                    _resources.Raids.First(x => x.Id != null && x.Id.Equals("the_key_of_ahdashim")).Wings
-                        .First(y => y.Id.Equals("the_key_of_ahdashim")).Events.Select(z => z.Token)
-                        .Select(q => q.Name)));
-            } 
+            await GetJsonResponse<Resources>(KILLPROOF_RESOURCES_URL)
+                .ContinueWith(async result =>
+                {
+                    if (!result.IsCompleted && !result.Result.Item1) return;
+                    _resources = result.Result.Item2;
+                    await Task.Run(LoadTokenIcons);
+                    if (_killProofQuickMenuEnabled.Value) {
+                        _killProofQuickMenu = BuildKillProofQuickMenu();
+                    }
+                });
 
-            await Task.Run(LoadTokenIcons);
             await Task.Run(LoadProfessionIcons);
             await Task.Run(LoadEliteIcons);
         }
@@ -212,7 +174,7 @@ namespace KillProofModule
         protected override void Update(GameTime gameTime) {
             if (_localPlayerButton != null) _localPlayerButton.Parent.Visible = GameService.ArcDps.RenderPresent;
             if (_smartPingCheckBox != null) _smartPingCheckBox.Visible = GameService.ArcDps.RenderPresent;
-            if (_killProofQuickMenu != null) _killProofQuickMenu.Visible = GameService.GameIntegration.IsInGame && GameService.ArcDps.Common.PlayersInSquad.Count != 0 && MyTokenQuantityRepository != null;
+            if (_killProofQuickMenu != null) _killProofQuickMenu.Visible = GameService.GameIntegration.IsInGame && GameService.ArcDps.Common.PlayersInSquad.Count != 0 && _myTokenQuantityRepository != null;
         }
 
         private async Task<(bool, T)> GetJsonResponse<T>(string request) {
@@ -249,10 +211,10 @@ namespace KillProofModule
             return false;
         }
         #region Render Getters
-        private async void LoadTokenIcons() {
-            (bool responseSuccess, Dictionary<string, Url> tokenRenderUrlRepository) = await GetJsonResponse<Dictionary<string, Url>>(KILLPROOF_API_URL + "icons");
-            if (responseSuccess) {
-                foreach (KeyValuePair<string, Url> token in tokenRenderUrlRepository) {
+        private async void LoadTokenIcons()
+        {
+            var tokenRenderUrlRepository = _resources.GetRenderUrlRepository();
+            foreach (var token in tokenRenderUrlRepository) {
                     var renderUri = token.Value;
                     if (TokenRenderRepository.Any(x => x.Key == token.Key)) {
                         try {
@@ -270,7 +232,6 @@ namespace KillProofModule
                     } else {
                         TokenRenderRepository.Add(token.Key, GameService.Content.GetRenderServiceTexture(token.Value));
                     }
-                }
             }
         }
         private async Task<IReadOnlyList<Profession>> LoadProfessions() {
@@ -334,7 +295,7 @@ namespace KillProofModule
             }
         }
         private AsyncTexture2D GetProfessionRender(CommonFields.Player player) {
-            if (!ProfessionRenderRepository.Any(x => x.Key.Equals(player.Profession))) {
+            if (!ProfessionRenderRepository.Any(x => x.Key.Equals((int)player.Profession))) {
                 var render = new AsyncTexture2D();
                 ProfessionRenderRepository.Add((int)player.Profession, render);
             }
@@ -342,7 +303,7 @@ namespace KillProofModule
         }
         private AsyncTexture2D GetEliteRender(CommonFields.Player player) {
             if (player.Elite == 0) { return GetProfessionRender(player); }
-            if (!EliteRenderRepository.Any(x => x.Key.Equals(player.Elite))) {
+            if (!EliteRenderRepository.Any(x => x.Key.Equals((int)player.Elite))) {
                 var render = new AsyncTexture2D();
                 try {
                     EliteRenderRepository.Add((int)player.Elite, render);
@@ -352,8 +313,8 @@ namespace KillProofModule
             }
             return EliteRenderRepository[(int)player.Elite];
         }
-        private AsyncTexture2D GetTokenRender(string key) {
-            if (!TokenRenderRepository.Any(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))) {
+        private AsyncTexture2D GetTokenRender(int key) {
+            if (TokenRenderRepository.All(x => x.Key != key)) {
                 var render = new AsyncTexture2D();
                 try {
                     TokenRenderRepository.Add(key, render);
@@ -400,7 +361,7 @@ namespace KillProofModule
             }
 
             if (_displayedPlayers.Any(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase))
-                || !ProfileAvailable(player.AccountName).Result) { return; };
+                || !ProfileAvailable(player.AccountName).Result) return;
 
             PlayerNotification.ShowNotification(player.AccountName, GetEliteRender(player), "profile available", 10);
 
@@ -432,9 +393,9 @@ namespace KillProofModule
                 CanScroll = false,
                 Size = wndw.ContentRegion.Size
             };
-            /// ###################
-            ///      <HEADER>
-            /// ###################
+            /* ###################
+            /      <HEADER>
+            / ################### */
             var header = new Panel() {
                 Parent = hPanel,
                 Size = new Point(hPanel.Width, 200),
@@ -480,12 +441,12 @@ namespace KillProofModule
                 };
             }
 
-            var img_killproof = new Image(_killProofMeLogoTexture) {
+            var imgKillproof = new Image(_killProofMeLogoTexture) {
                 Parent = header,
                 Size = new Point(128, 128),
                 Location = new Point(KillProofModule.LEFT_MARGIN + 10, KillProofModule.TOP_MARGIN + 5)
             };
-            var lab_account_name = new Label() {
+            var labAccountName = new Label() {
                 Parent = header,
                 Size = new Point(200, 30),
                 Location = new Point(header.Width / 2 - 100, header.Height / 2 + 30 + KillProofModule.TOP_MARGIN),
@@ -493,20 +454,20 @@ namespace KillProofModule
                 ShowShadow = true,
                 Text = "Account Name or KillProof.me-ID:"
             };
-            var tb_account_name = new TextBox() {
+            var tbAccountName = new TextBox() {
                 Parent = header,
                 Size = new Point(200, 30),
-                Location = new Point(header.Width / 2 - 100, lab_account_name.Bottom + KillProofModule.TOP_MARGIN),
+                Location = new Point(header.Width / 2 - 100, labAccountName.Bottom + KillProofModule.TOP_MARGIN),
                 PlaceholderText = "Player.0000",
 
             };
-            tb_account_name.EnterPressed += delegate {
-                if (!string.Equals(tb_account_name.Text, "") && !Regex.IsMatch(tb_account_name.Text, @"[^a-zA-Z0-9.\s]|^\.*$")) {
-                    wndw.Navigate(BuildKillProofPanel(wndw, new CommonFields.Player(null, tb_account_name.Text, 0, 0, false)));
+            tbAccountName.EnterPressed += delegate {
+                if (!string.Equals(tbAccountName.Text, "") && !Regex.IsMatch(tbAccountName.Text, @"[^a-zA-Z0-9.\s]|^\.*$")) {
+                    wndw.Navigate(BuildKillProofPanel(wndw, new CommonFields.Player(null, tbAccountName.Text, 0, 0, false)));
                 }
-                tb_account_name.Focused = false;
+                tbAccountName.Focused = false;
             };
-            var lab_squadPanel = new Label() {
+            var labSquadPanel = new Label() {
                 Parent = header,
                 Size = new Point(300, 40),
                 Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
@@ -514,12 +475,12 @@ namespace KillProofModule
                 Location = new Point(KillProofModule.LEFT_MARGIN, header.Bottom - 40),
                 Text = "Recent profiles:"
             };
-            /// ###################
-            ///      </HEADER>
-            /// ###################
-            /// ###################
-            ///      <FOOTER>
-            /// ###################
+            /* ###################
+            /      </HEADER>
+            / ###################
+            / ###################
+            /      <FOOTER>
+            / ################### */
             var footer = new Panel() {
                 Parent = hPanel,
                 Size = new Point(hPanel.Width, 50),
@@ -547,9 +508,9 @@ namespace KillProofModule
                 Text = checkUpdate.Result ? ModuleInstance.Version.Clean() : "Update available! Visit killproof.me/addons",
                 TextColor = checkUpdate.Result ? Color.White : Color.Red
             };
-            /// ###################
-            ///      </FOOTER>
-            /// ###################
+            /* ###################
+            /      </FOOTER>
+            / ################### */
             _squadPanel = new Panel() {
                 Parent = hPanel,
                 Size = new Point(header.Size.X, hPanel.Height - header.Height - footer.Height),
@@ -573,9 +534,9 @@ namespace KillProofModule
 
         private void FinishLoadingKillProofPanel(WindowBase wndw, Panel hPanel, CommonFields.Player player, KillProof currentAccount) {
             if (currentAccount != null) {
-                /// ###################
-                ///      <HEADER>
-                /// ###################
+                /* ###################
+                /      <HEADER>
+                / ################### */
                 var header = new Panel() {
                     Parent = hPanel,
                     Size = new Point(hPanel.Width, 200),
@@ -669,12 +630,12 @@ namespace KillProofModule
                 bSortByFractal.LeftMouseButtonPressed += MousePressedSortButton;
                 bSortByFractal.LeftMouseButtonReleased += MouseLeftSortButton;
                 bSortByFractal.MouseLeft += MouseLeftSortButton;
-                /// ###################
-                ///      </HEADER>
-                /// ###################
-                /// ###################
-                ///      <FOOTER>
-                /// ###################
+                /* ###################
+                /      </HEADER>
+                / ###################
+                / ###################
+                /      <FOOTER>
+                / ################### */
                 var footer = new Panel() {
                     Parent = hPanel,
                     Size = new Point(hPanel.Width, 50),
@@ -706,9 +667,9 @@ namespace KillProofModule
                     ShowShadow = true,
                     Text = @"Powered by www.killproof.me"
                 };
-                /// ###################
-                ///      </FOOTER>
-                /// ###################
+                /* ###################
+                /      </FOOTER>
+                / ################### */
                 var contentPanel = new Panel() {
                     Parent = hPanel,
                     Size = new Point(header.Size.X, hPanel.Height - header.Height - footer.Height),
@@ -727,7 +688,7 @@ namespace KillProofModule
                         if (killproof.Value > 0) {
                             var killProofButton = new KillProofButton() {
                                 Parent = contentPanel,
-                                Icon = GetTokenRender(killproof.Key),
+                                Icon = GetTokenRender(_resources.GetToken(killproof.Key).Id),
                                 Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
                                 Text = killproof.Value.ToString(),
                                 BottomText = killproof.Key
@@ -746,7 +707,7 @@ namespace KillProofModule
                         if (token.Value > 0) {
                             var killProofButton = new KillProofButton() {
                                 Parent = contentPanel,
-                                Icon = GetTokenRender(token.Key),
+                                Icon = GetTokenRender(_resources.GetToken(token.Key).Id),
                                 Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
                                 Text = token.Value.ToString(),
                                 BottomText = token.Key
@@ -761,7 +722,7 @@ namespace KillProofModule
                 }
 
                 if (currentAccount.titles != null) {
-                    foreach (KeyValuePair<string, string> token in currentAccount.titles) {
+                    foreach (var token in currentAccount.titles) {
                         var titleButton = new KillProofButton() {
                             Parent = contentPanel,
                             Font = GameService.Content.DefaultFont16,
@@ -788,7 +749,7 @@ namespace KillProofModule
                         _displayedKillProofs.Add(titleButton);
                     }
                 } else {
-                    // TODO: Show button indicating that titles were explicitly hidden
+                    // TODO: Show text indicating that titles were explicitly hidden
                     Logger.Info($"Player '{currentAccount.account_name}' has titles and achievements explicitly hidden.");
                 }
 
@@ -799,10 +760,10 @@ namespace KillProofModule
 
                     if (_displayedPlayers.Count == MAX_PLAYERS) { _displayedPlayers.Dequeue().Dispose(); }
 
-                    var new_player = new CommonFields.Player(null, player.AccountName, 0, 0, false);
+                    var newPlayer = new CommonFields.Player(null, player.AccountName, 0, 0, false);
                     var playerButton = new PlayerButton() {
                         Parent = _squadPanel,
-                        Player = new_player,
+                        Player = newPlayer,
                         Icon = GameService.Content.GetTexture("733268"),
                         Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                         IsNew = false
@@ -821,7 +782,7 @@ namespace KillProofModule
                     ShowBorder = true,
                     ShowTint = true
                 };
-                var lab_nothingHere = new Label() {
+                var labNothingHere = new Label() {
                     Parent = hPanel,
                     Size = hPanel.Size,
                     Location = new Point(0, -20),
@@ -832,7 +793,7 @@ namespace KillProofModule
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Middle
                 };
-                var lab_visitUs = new Label() {
+                var labVisitUs = new Label() {
                     Parent = hPanel,
                     Size = hPanel.Size,
                     Location = new Point(0, -20),
@@ -844,8 +805,8 @@ namespace KillProofModule
                     VerticalAlignment = VerticalAlignment.Middle
                 };
                 if (!player.Self && !player.AccountName.Equals(_localPlayerButton.Player.AccountName, StringComparison.InvariantCultureIgnoreCase)) {
-                    lab_nothingHere.Text = "No profile for \"" + player.AccountName + "\" found :(";
-                    lab_visitUs.Text = "\n\nPlease, share www.killproof.me with this player and help expand our database.";
+                    labNothingHere.Text = "No profile for \"" + player.AccountName + "\" found :(";
+                    labVisitUs.Text = "\n\nPlease, share www.killproof.me with this player and help expand our database.";
                 }
             }
 
@@ -897,37 +858,42 @@ namespace KillProofModule
                     _displayedKillProofs.Sort((e1, e2) => {
                         int result = e1.IsTitleDisplay.CompareTo(e2.IsTitleDisplay);
                         if (result != 0) return result;
-                        return e1.BottomText.CompareTo(e2.BottomText);
+                        return string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase);
                     });
                     foreach (KillProofButton e1 in _displayedKillProofs) { e1.Visible = true; }
                     break;
                 case SORTBY_KILLPROOF:
-                    _displayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
+                    _displayedKillProofs.Sort((e1, e2) =>
+                        string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (KillProofButton e1 in _displayedKillProofs)
                     {
                         e1.Visible = _currentProfile.killproofs != null && _currentProfile.killproofs.Any(x => x.Key.Equals(e1.BottomText));
                     }
                     break;
                 case SORTBY_TOKEN:
-                    _displayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
+                    _displayedKillProofs.Sort((e1, e2) =>
+                        string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (KillProofButton e1 in _displayedKillProofs)
                     {
                         e1.Visible = _currentProfile.tokens != null && _currentProfile.tokens.Any(x => x.Key.Equals(e1.BottomText));
                     }
                     break;
                 case SORTBY_TITLE:
-                    _displayedKillProofs.Sort((e1, e2) => e1.BottomText.CompareTo(e2.BottomText));
+                    _displayedKillProofs.Sort((e1, e2) =>
+                        string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (KillProofButton e1 in _displayedKillProofs) { e1.Visible = e1.IsTitleDisplay; }
                     break;
                 case SORTBY_FRACTAL:
-                    _displayedKillProofs.Sort((e1, e2) => e1.Text.CompareTo(e2.Text));
+                    _displayedKillProofs.Sort((e1, e2) =>
+                        string.Compare(e1.Text, e2.Text, StringComparison.InvariantCultureIgnoreCase));
                     foreach (KillProofButton e1 in _displayedKillProofs)
                     {
                         e1.Visible = e1.BottomText.ToLower().Contains("fractal");
                     }
                     break;
                 case SORTBY_RAID:
-                    _displayedKillProofs.Sort((e1, e2) => e1.Text.CompareTo(e2.Text));
+                    _displayedKillProofs.Sort((e1, e2) =>
+                        string.Compare(e1.Text, e2.Text, StringComparison.InvariantCultureIgnoreCase));
                     foreach (KillProofButton e1 in _displayedKillProofs)
                     {
                         e1.Visible = e1.BottomText.ToLower().Contains("raid");
@@ -972,17 +938,16 @@ namespace KillProofModule
             var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
             _myKillProof = await GetKillProofContent(player.AccountName);
             var killproofs = _myKillProof.tokens.MergeLeft(_myKillProof.killproofs);
-            MyTokenQuantityRepository = new Dictionary<string, int>();
+            _myTokenQuantityRepository = new Dictionary<Token, int>();
             foreach (KeyValuePair<string, int> pair in killproofs)
             {
-                var kpName = TokenIdRepository.FirstOrDefault(x => x.Key.Contains(pair.Key)).Key ?? pair.Key;
-                MyTokenQuantityRepository.Add(kpName, pair.Value);
+                _myTokenQuantityRepository.Add(_resources.GetToken(pair.Key), pair.Value);
             }
         }
-        private int GetMyQuantity(string token) {
-            if (!GameService.ArcDps.Loaded || GameService.ArcDps.Common.PlayersInSquad.Count == 0 || MyTokenQuantityRepository == null) return 0;
+        private int GetMyQuantity(Token token) {
+            if (!GameService.ArcDps.Loaded || GameService.ArcDps.Common.PlayersInSquad.Count == 0 || _myTokenQuantityRepository == null) return 0;
             try {
-                return MyTokenQuantityRepository.Any(x => x.Key.Contains(token)) ? MyTokenQuantityRepository[token] : 0;
+                return _myTokenQuantityRepository.Any(x => x.Key.Equals(token)) ? _myTokenQuantityRepository[token] : 0;
             } catch (KeyNotFoundException ex) {
                 Logger.Warn(ex.Message);
                 return 0;
@@ -997,11 +962,11 @@ namespace KillProofModule
                 Visible = false,
                 ShowBorder = true
             };
-            bgPanel.Resized += delegate (object sender, ResizedEventArgs args) {
+            bgPanel.Resized += delegate {
                 bgPanel.Location = new Point(10, 38);
             };
-            bgPanel.MouseEntered += delegate (object sender, MouseEventArgs e) {
-                var fadeIn = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 1.0f }, 0.45f);
+            bgPanel.MouseEntered += delegate {
+                GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 1.0f }, 0.45f);
             };
             var leftBracket = new Label() {
                 Parent = bgPanel,
@@ -1023,9 +988,9 @@ namespace KillProofModule
                 Location = new Point(quantity.Right + 2, 3),
                 SelectedItem = "Loading .."
             };
-            bgPanel.MouseLeft += delegate (object sender, MouseEventArgs e) {
+            bgPanel.MouseLeft += delegate {
                 //TODO: Check for when dropdown IsExpanded
-                var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 0.4f }, 0.45f);
+                GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 0.4f }, 0.45f);
             };
             var rightBracket = new Label() {
                 Parent = bgPanel,
@@ -1036,11 +1001,16 @@ namespace KillProofModule
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Top
             };
-            foreach (KeyValuePair<string, int> pair in TokenIdRepository) {
-                dropdown.Items.Add(pair.Key);
+            foreach (var token in _resources.GetAllTokens())
+            {
+                var wing = _resources.GetWing(token);
+                if (wing != null)
+                    dropdown.Items.Add($"W{_resources.GetAllWings().IndexOf(wing) + 1} | {token.Name}");
+                else
+                    dropdown.Items.Add(token.Name);
             }
-            dropdown.ValueChanged += async delegate {
-                var value = GetMyQuantity(dropdown.SelectedItem);
+            dropdown.ValueChanged += delegate {
+                var value = GetMyQuantity(_resources.GetToken(dropdown.SelectedItem));
                 quantity.Text = value + "";
             };
             dropdown.SelectedItem = "Legendary Insight";
@@ -1074,18 +1044,21 @@ namespace KillProofModule
                 randomizeButton.Size = new Point(27, 22);
                 randomizeButton.Location = new Point(sendButton.Right + 5, 2);
             };
-            randomizeButton.RightMouseButtonReleased += delegate {
+            randomizeButton.RightMouseButtonReleased += delegate
+            {
                 randomizeButton.Size = new Point(29, 24);
                 randomizeButton.Location = new Point(sendButton.Right + 7, 0);
-                var current = RaidWings.FindIndex(x => x.Equals(randomizeButton.Text));
-                var next = current + 1 <= RaidWings.Count - 1 ? current + 1 : 0;
-                randomizeButton.Text = RaidWings[next];
+                var allWings = _resources.GetAllWings();
+                var current = _resources.GetWing(randomizeButton.Text);
+                var wingIndex = allWings.IndexOf(current);
+                var next = wingIndex + 1 < allWings.Count() - 1 ? wingIndex + 1 : 0;
+                randomizeButton.Text = $"W{allWings.IndexOf(_resources.GetWing(next)) + 1}";
             };
             sendButton.LeftMouseButtonPressed += delegate {
                 sendButton.Size = new Point(22, 22);
                 sendButton.Location = new Point(rightBracket.Right + 3, 2);
             };
-            sendButton.LeftMouseButtonReleased += async delegate {
+            sendButton.LeftMouseButtonReleased += delegate {
                 sendButton.Size = new Point(24, 24);
                 sendButton.Location = new Point(rightBracket.Right + 1, 0);
 
@@ -1093,17 +1066,20 @@ namespace KillProofModule
 
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
-                if (randomizeButton.BackgroundColor == Color.LightGreen) {
-                    var tokenSelection = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
+                if (randomizeButton.BackgroundColor == Color.LightGreen)
+                {
+                    var wing = _resources.GetWing(randomizeButton.Text);
+                    var tokenSelection = wing.GetTokens();
                     var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
-                    chatLink.ItemId = singleRandomToken.Value;
-                    var amount = GetMyQuantity(singleRandomToken.Key);
+                    chatLink.ItemId = singleRandomToken.Id;
+                    var amount = GetMyQuantity(singleRandomToken);
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
                     GameService.GameIntegration.Chat.Send(chatLink.ToString());
                 } else {
-                    chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
-                    var amount = GetMyQuantity(dropdown.SelectedItem);
+                    var token = _resources.GetToken(dropdown.SelectedItem);
+                    chatLink.ItemId = token.Id;
+                    var amount = GetMyQuantity(token);
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0 ? (RandomUtil.GetRandom(0, 10) > 7 ? rest : 250) : amount);
                     GameService.GameIntegration.Chat.Send(chatLink.ToString());
@@ -1114,7 +1090,7 @@ namespace KillProofModule
                 sendButton.Location = new Point(rightBracket.Right + 3, 2);
             };
             var timeOutRightSend = new Dictionary<int, DateTimeOffset>();
-            sendButton.RightMouseButtonReleased += async delegate {
+            sendButton.RightMouseButtonReleased += delegate {
                 sendButton.Size = new Point(24, 24);
                 sendButton.Location = new Point(rightBracket.Right + 1, 0);
 
@@ -1123,18 +1099,18 @@ namespace KillProofModule
                 var chatLink = new Gw2Sharp.ChatLinks.ItemChatLink();
 
                 if (randomizeButton.BackgroundColor == Color.LightGreen) {
-                    var tokenSelection = TokenIdRepository.Where(x => x.Key.StartsWith(randomizeButton.Text)).ToDictionary(x => x.Key, x => x.Value);
+                    var wing = _resources.GetWing(randomizeButton.Text);
+                    var tokenSelection = wing.GetTokens();
                     var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
-                    chatLink.ItemId = singleRandomToken.Value;
+                    chatLink.ItemId = singleRandomToken.Id;
 
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId)) {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
-                        var kpName = TokenIdRepository.First(x => x.Value.Equals(chatLink.ItemId)).Key.Split('|').Reverse().ToList()[0].Trim();
                         if (cooldown.TotalMinutes < 2) {
                             var timeLeft = TimeSpan.FromMinutes(2 - cooldown.TotalMinutes);
                             var minuteWord = timeLeft.TotalSeconds > 119 ? $" {timeLeft:%m} minutes and" : timeLeft.TotalSeconds > 59 ? $" {timeLeft:%m} minute and" : "";
                             var secondWord = timeLeft.Seconds > 9 ? $"{timeLeft:ss} seconds" : timeLeft.Seconds > 1 ? $"{timeLeft:%s} seconds" : $"{timeLeft:%s} second";
-                            ScreenNotification.ShowNotification($"You can't send your {kpName} total\nwithin the next{minuteWord} {secondWord} again.", ScreenNotification.NotificationType.Error);
+                            ScreenNotification.ShowNotification($"You can't send your {singleRandomToken.Name} total\nwithin the next{minuteWord} {secondWord} again.", ScreenNotification.NotificationType.Error);
                             return;
                         }
                         timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
@@ -1142,18 +1118,19 @@ namespace KillProofModule
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(singleRandomToken.Key)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
-                } else {
-                    chatLink.ItemId = TokenIdRepository[dropdown.SelectedItem];
+                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(singleRandomToken)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
+                } else
+                {
+                    var token = _resources.GetToken(dropdown.SelectedItem);
+                    chatLink.ItemId = token.Id;
 
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId)) {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
-                        var kpName = TokenIdRepository.First(x => x.Value.Equals(chatLink.ItemId)).Key.Split('|').Reverse().ToList()[0].Trim();
                         if (cooldown.TotalMinutes < 2) {
                             var timeLeft = TimeSpan.FromMinutes(2 - cooldown.TotalMinutes);
                             var minuteWord = timeLeft.TotalSeconds > 119 ? $" {timeLeft:%m} minutes and" : timeLeft.TotalSeconds > 59 ? $" {timeLeft:%m} minute and" : "";
                             var secondWord = timeLeft.Seconds > 9 ? $"{timeLeft:ss} seconds" : timeLeft.Seconds > 1 ? $"{timeLeft:%s} seconds" : $"{timeLeft:%s} second";
-                            ScreenNotification.ShowNotification($"You can't send your {kpName} total\nwithin the next{minuteWord} {secondWord} again.", ScreenNotification.NotificationType.Error);
+                            ScreenNotification.ShowNotification($"You can't send your {token.Name} total\nwithin the next{minuteWord} {secondWord} again.", ScreenNotification.NotificationType.Error);
                             return;
                         }
                         timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
@@ -1161,16 +1138,16 @@ namespace KillProofModule
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(dropdown.SelectedItem)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
+                    GameService.GameIntegration.Chat.Send($"Total: {GetMyQuantity(token)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
                 }
             };
             bgPanel.Disposed += delegate {
-                var fadeOut = GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 0.0f }, 0.2f);
+                GameService.Animation.Tweener.Tween(bgPanel, new { Opacity = 0.0f }, 0.2f);
             };
-            bgPanel.PropertyChanged += delegate(object sender, PropertyChangedEventArgs e)
+            bgPanel.PropertyChanged += delegate
             {
                 if (!bgPanel.Visible) return;
-                quantity.Text = GetMyQuantity(dropdown.SelectedItem).ToString();
+                quantity.Text = GetMyQuantity(_resources.GetToken(dropdown.SelectedItem)).ToString();
             };
             return bgPanel;
         }
