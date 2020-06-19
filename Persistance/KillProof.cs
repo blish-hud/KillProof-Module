@@ -1,11 +1,11 @@
-﻿using Flurl;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Flurl;
 
-namespace KillProofModule
+namespace KillProofModule.Persistance
 {
     /// <summary>
-    /// JSON class for replies from https://killproof.me/api/
+    ///     JSON class for replies from https://killproof.me/api/
     /// </summary>
     public class KillProof
     {
@@ -17,6 +17,5 @@ namespace KillProofModule
         public string kpid { get; set; }
         public Dictionary<string, int> tokens { get; set; }
         public Dictionary<string, int> killproofs { get; set; }
-
     }
 }

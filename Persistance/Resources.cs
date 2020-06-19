@@ -1,9 +1,9 @@
 ﻿using System;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Blish_HUD;
+using Newtonsoft.Json;
+
 namespace KillProofModule.Persistance
 {
     internal class Resources
@@ -20,51 +20,67 @@ namespace KillProofModule.Persistance
                 if (i != index) continue;
                 return allWings[i];
             }
+
             return null;
         }
+
         public Wing GetWing(string id)
         {
             if (Regex.IsMatch(id, @"^[Ww]\d+$"))
-                return GetWing(int.Parse(string.Join(string.Empty,Regex.Matches(id, @"\d+$").OfType<Match>().Select(m => m.Value))) - 1);
-            return GetAllWings().FirstOrDefault(wing => wing.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
+                return GetWing(int.Parse(string.Join(string.Empty,
+                    Regex.Matches(id, @"\d+$").OfType<Match>().Select(m => m.Value))) - 1);
+            return GetAllWings()
+                .FirstOrDefault(wing => wing.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
         }
+
         public Wing GetWing(Token token)
         {
             return GetAllWings().FirstOrDefault(wing => wing.Events.Where(encounter => encounter?.Token != null)
-                                .Any(encounters => encounters.Token.Equals(token)));
+                .Any(encounters => encounters.Token.Equals(token)));
         }
+
         public IEnumerable<Wing> GetAllWings()
         {
             return Raids.Where(raid => raid != null).SelectMany(raid => raid.Wings).Where(wing => wing != null);
         }
+
         private IEnumerable<Event> GetAllEvents()
         {
             return GetAllWings().Where(wing => wing.Events != null).SelectMany(wing => wing.Events);
         }
+
         public IEnumerable<Token> GetAllTokens()
         {
-            return GeneralTokens.Concat(Fractals.Where(fractal => fractal.Token != null).Select(fractal => fractal.Token))
-                                .Concat(GetAllEvents().Where(encounter => encounter.Token != null)
-                                .Select(encounter => encounter.Token));
+            return GeneralTokens
+                .Concat(Fractals.Where(fractal => fractal.Token != null).Select(fractal => fractal.Token))
+                .Concat(GetAllEvents().Where(encounter => encounter.Token != null)
+                    .Select(encounter => encounter.Token));
         }
+
         public Token GetToken(int id)
         {
             return GetAllTokens().FirstOrDefault(token => token.Id == id);
         }
+
         public Token GetToken(string name)
         {
             name = name.Split('|').Reverse().ToList()[0].Trim();
-            return GetAllTokens().Where(token => token.Name != null).FirstOrDefault(token => token.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return GetAllTokens().Where(token => token.Name != null).FirstOrDefault(token =>
+                token.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
+
         private IEnumerable<Miniature> GetAllMiniatures()
         {
             return GetAllEvents().SelectMany(encounter => encounter.Miniatures);
         }
+
         public Event GetEvent(string id)
         {
-            return GetAllEvents().FirstOrDefault(encounter => encounter.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
+            return GetAllEvents().FirstOrDefault(encounter =>
+                encounter.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
         }
     }
+
     internal class Raid
     {
         [JsonProperty("id")] public string Id { get; set; }
@@ -76,6 +92,7 @@ namespace KillProofModule.Persistance
         [JsonProperty("id")] public string Id { get; set; }
         [JsonProperty("mapid")] public int Mapid { get; set; }
         [JsonProperty("events")] public IList<Event> Events { get; set; }
+
         public IList<Token> GetTokens()
         {
             return Events.Where(encounter => encounter.Token != null).Select(encounters => encounters.Token).ToList();

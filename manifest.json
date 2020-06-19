@@ -1,11 +1,12 @@
 {
   "name": "KillProof Module",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "namespace": "KillProofModule",
   "package": "KillProof Module.dll",
   "manifest_version": 1,
 
-  "description": "Check someone's kills for raiding. Uses ArcDPS Bridge service if available.\n\nPowered by www.killproof.me",
+  "description":
+    "Check someone's kills for raiding. Uses ArcDPS Bridge service if available.\n\nPowered by www.killproof.me",
   "dependencies": {
     "bh.blishhud": ">=0.5.2"
   },
