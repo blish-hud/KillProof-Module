@@ -14,7 +14,7 @@ namespace KillProofModule.Persistance
 
         public Wing GetWing(int index)
         {
-            var allWings = GetAllWings();
+            var allWings = GetAllWings().ToArray();
             for (var i = 0; i < allWings.Count() - 1; i++)
             {
                 if (i != index) continue;
@@ -32,20 +32,20 @@ namespace KillProofModule.Persistance
         {
             return GetAllWings().FirstOrDefault(wing => wing.Events.Any(encounters => encounters.Token.Equals(token)));
         }
-        public IList<Wing> GetAllWings()
+        public IEnumerable<Wing> GetAllWings()
         {
-            return Raids.SelectMany(raid => raid.Wings).ToList();
+            return Raids.SelectMany(raid => raid.Wings).Where(wing => wing != null);
         }
-        private IList<Event> GetAllEvents()
+        private IEnumerable<Event> GetAllEvents()
         {
-            return GetAllWings().SelectMany(wing => wing.Events).ToList();
+            return GetAllWings().SelectMany(wing => wing.Events);
         }
-        public IList<Token> GetAllTokens()
+        public IEnumerable<Token> GetAllTokens()
         {
             return GeneralTokens.Concat(GetAllEvents().Select(encounter => encounter.Token)
                                 .Concat(Fractals.Select(fractal => fractal.Token)))
                                 .Where(token => token != null)
-                                .GroupBy(token => token.Id).Select(g => g.First()).ToList();
+                                .GroupBy(token => token.Id).Select(g => g.First());
         }
         public Token GetToken(int id)
         {
@@ -56,10 +56,10 @@ namespace KillProofModule.Persistance
             name = name.Split('|').Reverse().ToList()[0].Trim();
             return GetAllTokens().FirstOrDefault(token => token.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
-        private IList<Miniature> GetAllMiniatures()
+        private IEnumerable<Miniature> GetAllMiniatures()
         {
             return GetAllEvents().SelectMany(encounter => encounter.Miniatures)
-                                 .GroupBy(miniature => miniature.Id).Select(g => g.First()).ToList();
+                                 .GroupBy(miniature => miniature.Id).Select(g => g.First());
         }
         public Event GetEvent(string id)
         {

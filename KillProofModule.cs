@@ -1005,7 +1005,7 @@ namespace KillProofModule
             {
                 var wing = _resources.GetWing(token);
                 if (wing != null)
-                    dropdown.Items.Add($"W{_resources.GetAllWings().IndexOf(wing) + 1} | {token.Name}");
+                    dropdown.Items.Add($"W{_resources.GetAllWings().ToList().IndexOf(wing) + 1} | {token.Name}");
                 else
                     dropdown.Items.Add(token.Name);
             }
@@ -1048,7 +1048,7 @@ namespace KillProofModule
             {
                 randomizeButton.Size = new Point(29, 24);
                 randomizeButton.Location = new Point(sendButton.Right + 7, 0);
-                var allWings = _resources.GetAllWings();
+                var allWings = _resources.GetAllWings().ToList();
                 var current = _resources.GetWing(randomizeButton.Text);
                 var wingIndex = allWings.IndexOf(current);
                 var next = wingIndex + 1 < allWings.Count() - 1 ? wingIndex + 1 : 0;
