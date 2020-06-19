@@ -186,12 +186,15 @@ namespace KillProofModule
 
         protected override async Task LoadAsync()
         {
-            var (responseSuccess, resources) = await GetJsonResponse<Resources>(KILLPROOF_RESOURCES_URL);
+            var (responseSuccess, resources) = await GetJsonResponse<Resources>("https://raw.githubusercontent.com/blish-hud/KillProof-Module/resources/ref/resources.json");
             if (responseSuccess)
             {
                 _resources = resources;
-                Logger.Info(_resources.Raids.First(x => x.Wings.First(y => y.Id.Equals("the_key_of_ahdashim")).Id.Equals("the_key_of_ahdashim")).ToString());
-            }
+                Logger.Info(string.Join("\n",
+                    _resources.Raids.First(x => x.Id != null && x.Id.Equals("the_key_of_ahdashim")).Wings
+                        .First(y => y.Id.Equals("the_key_of_ahdashim")).Events.Select(z => z.Token)
+                        .Select(q => q.Name)));
+            } 
 
             await Task.Run(LoadTokenIcons);
             await Task.Run(LoadProfessionIcons);

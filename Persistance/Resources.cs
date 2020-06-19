@@ -5,7 +5,7 @@ namespace KillProofModule.Persistance
     internal class Resources
     {
         [JsonProperty("raids")] public IList<Raid> Raids { get; set; }
-        [JsonProperty("fractals")] public List<Fractal> Fractals { get; set; }
+        [JsonProperty("fractals")] public IList<Fractal> Fractals { get; set; }
     }
     internal class Raid
     {
