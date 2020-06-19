@@ -43,9 +43,9 @@ namespace KillProofModule.Persistance
         }
         public IEnumerable<Token> GetAllTokens()
         {
-            return GeneralTokens.Concat(GetAllEvents().Where(encounter => encounter.Token != null)
-                                .Select(encounter => encounter.Token))
-                                .Concat(Fractals.Where(fractal => fractal.Token != null).Select(fractal => fractal.Token));
+            return GeneralTokens.Concat(Fractals.Where(fractal => fractal.Token != null).Select(fractal => fractal.Token))
+                                .Concat(GetAllEvents().Where(encounter => encounter.Token != null)
+                                .Select(encounter => encounter.Token));
         }
         public Token GetToken(int id)
         {
@@ -78,7 +78,7 @@ namespace KillProofModule.Persistance
         [JsonProperty("events")] public IList<Event> Events { get; set; }
         public IList<Token> GetTokens()
         {
-            return Events.Select(encounters => encounters.Token).ToList();
+            return Events.Where(encounter => encounter.Token != null).Select(encounters => encounters.Token).ToList();
         }
     }
 
