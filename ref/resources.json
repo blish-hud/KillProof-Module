@@ -1,19 +1,17 @@
 {
-  "raids": [
+  "general_tokens": [
     {
-      "general_tokens": [
-        {
-          "id": 77302,
-          "name": "Legendary Insight",
-          "icon": "https://render.guildwars2.com/file/6D33B7387BAF2E2CC9B5D37D1D1B01246AB6FA22/1302744.png"
-        },
-        {
-          "id": 88485,
-          "name": "Legendary Divination",
-          "icon": "https://render.guildwars2.com/file/6E5318D426D1611F5A36ED5E7159DFAC7F911C04/2038674.png"
-        }
-      ]
+      "id": 77302,
+      "name": "Legendary Insight",
+      "icon": "https://render.guildwars2.com/file/6D33B7387BAF2E2CC9B5D37D1D1B01246AB6FA22/1302744.png"
     },
+    {
+      "id": 88485,
+      "name": "Legendary Divination",
+      "icon": "https://render.guildwars2.com/file/6E5318D426D1611F5A36ED5E7159DFAC7F911C04/2038674.png"
+    }
+  ],
+  "raids": [
     {
       "id": "forsaken_thicket",
       "wings": [
