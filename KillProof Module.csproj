@@ -70,7 +70,7 @@
     <Compile Include="Controls\KillProofButton.cs" />
     <Compile Include="Controls\PlayerButton.cs" />
     <Compile Include="Controls\PlayerNotification.cs" />
-    <Compile Include="KillProof.cs" />
+    <Compile Include="Persistance\KillProof.cs" />
     <Compile Include="KillProofModule.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -90,6 +90,7 @@
     </Reference>
     <Reference Include="Gw2Sharp, Version=0.10.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\Gw2Sharp.0.10.0\lib\netstandard2.0\Gw2Sharp.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="MonoGame.Extended, Version=3.7.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\MonoGame.Extended.3.7.0\lib\netstandard2.0\MonoGame.Extended.dll</HintPath>
