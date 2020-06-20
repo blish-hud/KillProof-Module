@@ -15,7 +15,7 @@ namespace KillProofModule.Persistance
         public Wing GetWing(int index)
         {
             var allWings = GetAllWings().ToArray();
-            for (var i = 0; i < allWings.Count() - 1; i++)
+            for (var i = 0; i < allWings.Count(); i++)
             {
                 if (i != index) continue;
                 return allWings[i];
