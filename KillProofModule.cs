@@ -128,8 +128,20 @@ namespace KillProofModule
             await GetJsonResponse<Resources>(KILLPROOF_RESOURCES_URL)
                 .ContinueWith(async result =>
                 {
-                    if (!result.IsCompleted && !result.Result.Item1) return;
-                    _resources = result.Result.Item2;
+                    if (!result.IsCompleted && !result.Result.Item1)
+                    {
+                        using (var fs = ContentsManager.GetFileStream("resources.json")) {
+                            fs.Position = 0;
+                            using (var jsonReader = new JsonTextReader(new StreamReader(fs)))
+                            {
+                                var serializer = new JsonSerializer();
+                                _resources = serializer.Deserialize<Resources>(jsonReader);
+                            }
+                        }
+                    } else {
+                        _resources = result.Result.Item2;
+                    }
+
                     await Task.Run(LoadTokenIcons);
                     if (_killProofQuickMenuEnabled.Value) _killProofQuickMenu = BuildKillProofQuickMenu();
                 });
@@ -1254,9 +1266,9 @@ namespace KillProofModule
                 randomizeButton.Location = new Point(sendButton.Right + 7, 0);
                 var allWings = _resources.GetAllWings().ToList();
                 var current = _resources.GetWing(randomizeButton.Text);
-                var wingIndex = allWings.IndexOf(current);
-                var next = wingIndex + 1 < allWings.Count() - 1 ? wingIndex + 1 : 0;
-                randomizeButton.Text = $"W{allWings.IndexOf(_resources.GetWing(next)) + 1}";
+                var wingIndex = allWings.IndexOf(current) + 1;
+                var next = wingIndex + 1 <= allWings.Count() ? wingIndex + 1 : 1;
+                randomizeButton.Text = $"W{next}";
             };
             sendButton.LeftMouseButtonPressed += delegate
             {
