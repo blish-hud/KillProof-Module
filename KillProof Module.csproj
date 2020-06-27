@@ -72,6 +72,11 @@
     <Compile Include="Controls\PlayerNotification.cs" />
     <Compile Include="Persistance\KillProof.cs" />
     <Compile Include="KillProofModule.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Blish HUD">
@@ -147,6 +152,12 @@
     <None Include="BuildScripts\_DoNotModify.txt" />
   </ItemGroup>
   <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PreBuildEvent>powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -File "$(ProjectDir)BuildScripts\CopyRef.ps1" -Project "$(ProjectDir)\" -Output "$(OutDir)\"</PreBuildEvent>

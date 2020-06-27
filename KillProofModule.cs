@@ -41,7 +41,6 @@ namespace KillProofModule
         private const string SORTBY_TOKEN = "Tokens";
         private const string SORTBY_TITLE = "Titles";
         private const string SORTBY_RAID = "Raid Titles";
-
         private const string SORTBY_FRACTAL = "Fractal Titles";
 
         // Max profile buttons on SquadPanel before dequeuing FiFo behavior.
@@ -64,6 +63,7 @@ namespace KillProofModule
         private SettingEntry<bool> _killProofQuickMenuEnabled;
 
         private WindowTab _killProofTab;
+        private Panel _modulePanel;
         private PlayerButton _localPlayerButton;
         private KillProof _myKillProof;
 
@@ -89,9 +89,69 @@ namespace KillProofModule
         protected override void DefineSettings(SettingCollection settings)
         {
             _killProofQuickMenuEnabled = settings.DefineSetting("KillProofQuickMenuEnabled", false,
-                "Kill Proof Quick Access Menu", "Quick access to ping kill proofs.");
+                SmartPingMenuSettingDisplayName, SmartPingMenuSettingDescription);
         }
 
+        private string SmartPingMenuSettingDisplayName;
+        private string SmartPingMenuSettingDescription;
+        private string KillProofTabName;
+        private string NewVersionFound;
+        private string NotificationProfileAvailable;
+        private string SmartPingMenuToggleCheckboxText;
+        private string SmartPingMenuCheckboxTooltip;
+        private string StartedBlishHUDWhileGw2AlreadyRunning;
+        private string RefreshMapToSeeYourProfile;
+        private string SearchBoxText;
+        private string RecentProfileText;
+        private string PoweredByText;
+        private string LastRefreshText;
+        private string UpdateAvailableVisitText;
+        private string KpIdText;
+        private string NotYetRegisteredText;
+        private string VisitUsAndHelpText;
+        private string NoProfileFoundText;
+        private string PleaseShareSiteText;
+        private string ProfileBackButtonNavTitle;
+        private string LoadingLabel;
+        private string SmartPingMenuSendButtonTooltip;
+        private string SmartPingMenuRandomizeButtonTooltip;
+        private string SmartPingMenuRightclickSendMessage;
+        private void ChangeLocalization(object sender, EventArgs e)
+        {
+            SmartPingMenuSettingDisplayName = Properties.Resources.Kill_Proof_Smart_Ping_Menu;
+            SmartPingMenuSettingDescription = Properties.Resources.Quick_access_to_ping_kill_proofs_;
+            KillProofTabName = Properties.Resources.KillProof;
+            NewVersionFound = Properties.Resources.A_new_version_of_the_KillProof_module_was_found_;
+            NotificationProfileAvailable = Properties.Resources.profile_available;
+            SmartPingMenuToggleCheckboxText = Properties.Resources.Show_Smart_Ping_Menu;
+            SmartPingMenuCheckboxTooltip = Properties.Resources.Shows_a_menu_on_the_top_left_corner_of_your_screen_which_allows_you_to_quickly_access_and_ping_your_killproofs_;
+            StartedBlishHUDWhileGw2AlreadyRunning = Properties.Resources.You_started_Blish_HUD_while_Guild_Wars_2_was_already_running_;
+            RefreshMapToSeeYourProfile = Properties.Resources.Refresh_map_to_see_your_profile_;
+            SearchBoxText = Properties.Resources.Account_Name_or_KillProof_me_ID_;
+            RecentProfileText = Properties.Resources.Recent_profiles_;
+            PoweredByText = Properties.Resources.Powered_by_www_killproof_me;
+            LastRefreshText = Properties.Resources.Last_Refresh_;
+            UpdateAvailableVisitText = Properties.Resources.Update_available__Visit_killproof_me_addons;
+            KpIdText = Properties.Resources.ID_;
+            NotYetRegisteredText = Properties.Resources.Not_yet_registered___;
+            VisitUsAndHelpText = Properties.Resources.Visit_www_killproof_me_and_allow_us_to_record_your_KillProofs_for_you_;
+            NoProfileFoundText = Properties.Resources.No_profile_for____0____found___;
+            PleaseShareSiteText = Properties.Resources.Please__share_www_killproof_me_with_this_player_and_help_expand_our_database_;
+            ProfileBackButtonNavTitle = Properties.Resources.Profile;
+            LoadingLabel = Properties.Resources.Loading___;
+            SmartPingMenuSendButtonTooltip = Properties.Resources.Send_To_Chat_nLeft_Click__Only_send_code_up_to_a_stack_s_worth__250x____nRight_Click__Send_killproof_me_total_amount_;
+            SmartPingMenuRandomizeButtonTooltip = Properties.Resources.Random_token_from_selected_wing_when_pressing_Send_To_Chat__nLeft_Click__Toggle_nRight_Click__Iterate_wings;
+            SmartPingMenuRightclickSendMessage = Properties.Resources.Total___0__of__1___killproof_me__2__;
+
+            //TODO: Implement as View so panel reloads automatically.
+            _modulePanel?.Dispose();
+            _modulePanel = BuildHomePanel(GameService.Overlay.BlishHudWindow);
+
+            if (_killProofTab != null)
+                GameService.Overlay.BlishHudWindow.RemoveTab(_killProofTab);
+
+            _killProofTab = GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture, _modulePanel, 0);
+        }
         private void LoadTextures()
         {
             _killProofIconTexture = ContentsManager.GetTexture("killproof_icon.png");
@@ -118,6 +178,7 @@ namespace KillProofModule
             _cachedKillProofs = new List<KillProof>();
 
             LoadTextures();
+            GameService.Overlay.UserLocaleChanged += ChangeLocalization;
 
             GameService.ArcDps.Common.Activate();
         }
@@ -151,8 +212,7 @@ namespace KillProofModule
 
         protected override void OnModuleLoaded(EventArgs e)
         {
-            _killProofTab = GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture,
-                BuildHomePanel(GameService.Overlay.BlishHudWindow), 0);
+            ChangeLocalization(null, null);
             GameService.ArcDps.Common.PlayerAdded += PlayerAddedEvent;
 
             // Base handler must be called
@@ -199,6 +259,7 @@ namespace KillProofModule
         /// <inheritdoc />
         protected override void Unload()
         {
+            GameService.Overlay.UserLocaleChanged -= ChangeLocalization;
             _killProofQuickMenu?.Dispose();
             _squadPanel?.Dispose();
             _localPlayerButton?.Dispose();
@@ -245,13 +306,12 @@ namespace KillProofModule
             {
                 if (ModuleInstance.Version >= remoteManifest.Version)
                     return true;
-                Logger.Warn($"A new version of the KillProof module was found: '{remoteManifest.Version.Clean()}'.");
+                Logger.Warn(NewVersionFound + ' ' + remoteManifest.Version.Clean());
             }
             else
             {
                 Logger.Info("Failed to check for new version.");
             }
-
             return false;
         }
 
@@ -457,7 +517,7 @@ namespace KillProofModule
                     x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase))
                 || !ProfileAvailable(player.AccountName).Result) return;
 
-            PlayerNotification.ShowNotification(player.AccountName, GetEliteRender(player), "profile available", 10);
+            PlayerNotification.ShowNotification(player.AccountName, GetEliteRender(player), NotificationProfileAvailable, 10);
 
             var optionalButton = _displayedPlayers.FirstOrDefault(x =>
                 x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase));
@@ -525,9 +585,8 @@ namespace KillProofModule
                     Parent = header,
                     Location = new Point(selfButtonPanel.Location.X + LEFT_MARGIN, selfButtonPanel.Bottom),
                     Size = new Point(selfButtonPanel.Width, 30),
-                    Text = "Show Smart Ping Menu",
-                    BasicTooltipText =
-                        "Shows a menu on the top left corner of your screen which allows you to quickly access and ping your killproofs.",
+                    Text = SmartPingMenuToggleCheckboxText,
+                    BasicTooltipText = SmartPingMenuCheckboxTooltip,
                     Checked = _killProofQuickMenuEnabled.Value
                 };
                 _smartPingCheckBox.CheckedChanged += delegate(object sender, CheckChangedEvent e)
@@ -541,8 +600,7 @@ namespace KillProofModule
                 _localPlayerButton = new PlayerButton
                 {
                     Parent = selfButtonPanel,
-                    Player = new CommonFields.Player("You started Blish HUD while Guild Wars 2 was already running.",
-                        "Refresh map to see your profile.", 0, 0, true),
+                    Player = new CommonFields.Player(StartedBlishHUDWhileGw2AlreadyRunning,RefreshMapToSeeYourProfile, 0, 0, true),
                     Icon = GameService.Content.GetTexture("733268"),
                     IsNew = false,
                     Location = new Point(0, 0),
@@ -565,7 +623,7 @@ namespace KillProofModule
                 Location = new Point(header.Width / 2 - 100, header.Height / 2 + 30 + TOP_MARGIN),
                 StrokeText = true,
                 ShowShadow = true,
-                Text = "Account Name or KillProof.me-ID:"
+                Text = SearchBoxText
             };
             var tbAccountName = new TextBox
             {
@@ -590,7 +648,7 @@ namespace KillProofModule
                     ContentService.FontStyle.Regular),
                 StrokeText = true,
                 Location = new Point(LEFT_MARGIN, header.Bottom - 40),
-                Text = "Recent profiles:"
+                Text = RecentProfileText
             };
             /* ###################
             /      </HEADER>
@@ -613,7 +671,7 @@ namespace KillProofModule
                 Location = new Point(footer.Width / 2 - LABEL_SMALL.X / 2, footer.Height / 2 - LABEL_SMALL.Y / 2),
                 StrokeText = true,
                 ShowShadow = true,
-                Text = @"Powered by www.killproof.me"
+                Text = PoweredByText
             };
             var checkUpdate = Task.Run(() => IsLatestVersion());
             checkUpdate.Wait();
@@ -627,7 +685,7 @@ namespace KillProofModule
                 ShowShadow = true,
                 Text = checkUpdate.Result
                     ? ModuleInstance.Version.Clean()
-                    : "Update available! Visit killproof.me/addons",
+                    : UpdateAvailableVisitText,
                 TextColor = checkUpdate.Result ? Color.White : Color.Red
             };
             /* ###################
@@ -811,7 +869,7 @@ namespace KillProofModule
                     Location = new Point(footer.Width / 2 - LABEL_SMALL.X / 2, footer.Height / 2 - LABEL_SMALL.Y / 2),
                     StrokeText = true,
                     ShowShadow = true,
-                    Text = @"Powered by www.killproof.me"
+                    Text = PoweredByText
                 };
                 /* ###################
                 /      </FOOTER>
@@ -827,8 +885,8 @@ namespace KillProofModule
                 };
                 currentAccountName.Text = currentAccount.AccountName;
                 currentAccountLastRefresh.Text =
-                    "Last Refresh: " + $"{currentAccount.LastRefresh:dddd, d. MMMM yyyy - HH:mm:ss}";
-                currentAccountKpId.Text = "ID: " + currentAccount.KpId;
+                    LastRefreshText + $" {currentAccount.LastRefresh:dddd, d. MMMM yyyy - HH:mm:ss}";
+                currentAccountKpId.Text = KpIdText + ' ' + currentAccount.KpId;
                 currentAccountProofUrl.Text = currentAccount.ProofUrl;
 
                 if (currentAccount.Killproofs != null)
@@ -882,16 +940,16 @@ namespace KillProofModule
                             Parent = contentPanel,
                             Font = GameService.Content.DefaultFont16,
                             Text = title.Name,
-                            BottomText = title.Mode,
+                            BottomText = title.Mode.ToString(),
                             IsTitleDisplay = true
                         };
 
                         switch (title.Mode)
                         {
-                            case "raid":
+                            case Mode.Raid:
                                 titleButton.Icon = _sortByRaidTexture;
                                 break;
-                            case "fractal":
+                            case Mode.Fractal:
                                 titleButton.Icon = _sortByFractalTexture;
                                 break;
                         }
@@ -949,7 +1007,7 @@ namespace KillProofModule
                     StrokeText = true,
                     Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
                         ContentService.FontSize.Size36, ContentService.FontStyle.Regular),
-                    Text = "Not yet registered :(",
+                    Text = NotYetRegisteredText,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Middle
                 };
@@ -962,23 +1020,22 @@ namespace KillProofModule
                     StrokeText = true,
                     Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
                         ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
-                    Text = "\n\nVisit www.killproof.me and allow us to record your KillProofs for you.",
+                    Text = "\n\n" + VisitUsAndHelpText,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Middle
                 };
                 if (!player.Self && !player.AccountName.Equals(_localPlayerButton.Player.AccountName,
                     StringComparison.InvariantCultureIgnoreCase))
                 {
-                    labNothingHere.Text = "No profile for \"" + player.AccountName + "\" found :(";
-                    labVisitUs.Text =
-                        "\n\nPlease, share www.killproof.me with this player and help expand our database.";
+                    labNothingHere.Text = NoProfileFoundText.Replace("{0}", player.AccountName);
+                    labVisitUs.Text = "\n\n" + PleaseShareSiteText;
                 }
             }
 
             var backButton = new BackButton(wndw)
             {
-                Text = "KillProof",
-                NavTitle = "Profile",
+                Text = KillProofTabName,
+                NavTitle = ProfileBackButtonNavTitle,
                 Parent = hPanel,
                 Location = new Point(20, 20)
             };
@@ -1150,7 +1207,7 @@ namespace KillProofModule
                 Parent = bgPanel,
                 Size = new Point(260, 20),
                 Location = new Point(quantity.Right + 2, 3),
-                SelectedItem = "Loading .."
+                SelectedItem = LoadingLabel
             };
             bgPanel.MouseLeft += delegate
             {
@@ -1181,7 +1238,7 @@ namespace KillProofModule
             {
                 quantity.Text = _myKillProof.GetTokenAmount(dropdown.SelectedItem).ToString();
             };
-            dropdown.SelectedItem = "Legendary Insight";
+            dropdown.SelectedItem = dropdown.Items[0];
             var sendButton = new Image
             {
                 Parent = bgPanel,
@@ -1189,8 +1246,7 @@ namespace KillProofModule
                 Location = new Point(rightBracket.Right + 1, 0),
                 Texture = GameService.Content.GetTexture("784268"),
                 SpriteEffects = SpriteEffects.FlipHorizontally,
-                BasicTooltipText =
-                    "Send To Chat\nLeft-Click: Only send code up to a stack's worth (250x). \nRight-Click: Send killproof.me total amount."
+                BasicTooltipText = SmartPingMenuSendButtonTooltip
             };
             var randomizeButton = new StandardButton
             {
@@ -1199,8 +1255,7 @@ namespace KillProofModule
                 Location = new Point(sendButton.Right + 7, 0),
                 Text = "W1",
                 BackgroundColor = Color.Gray,
-                BasicTooltipText =
-                    "Random token from selected wing when pressing Send To Chat.\nLeft-Click: Toggle\nRight-Click: Iterate wings"
+                BasicTooltipText = SmartPingMenuRandomizeButtonTooltip
             };
             randomizeButton.LeftMouseButtonPressed += delegate
             {
@@ -1345,10 +1400,10 @@ namespace KillProofModule
                     {
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
-
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameService.GameIntegration.Chat.Send(
-                        $"Total: {token.Amount} of {chatLink} (killproof.me/{_myKillProof.KpId})");
+                    GameService.GameIntegration.Chat.Send(SmartPingMenuRightclickSendMessage.Replace("{0}", token.Amount.ToString())
+                                                                                            .Replace("{1}", chatLink.ToString())
+                                                                                            .Replace("{2}", _myKillProof.KpId));
                 }
             };
             bgPanel.Disposed += delegate { GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 0.0f}, 0.2f); };
