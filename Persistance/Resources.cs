@@ -112,11 +112,12 @@ namespace KillProofModule.Persistance
         [JsonProperty("icon")] public string Icon { get; set; }
     }
 
-    internal class Token
+    public class Token
     {
         [JsonProperty("id")] public int Id { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
         [JsonProperty("icon")] public string Icon { get; set; }
+        [JsonProperty("amount")] public int Amount { get; set; }
     }
 
     internal class Fractal

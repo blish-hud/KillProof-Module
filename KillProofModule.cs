@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -65,8 +66,6 @@ namespace KillProofModule
         private WindowTab _killProofTab;
         private PlayerButton _localPlayerButton;
         private KillProof _myKillProof;
-
-        private Dictionary<Token, int> _myTokenQuantityRepository;
 
         private Resources _resources;
         private Checkbox _smartPingCheckBox;
@@ -166,8 +165,7 @@ namespace KillProofModule
             if (_smartPingCheckBox != null) _smartPingCheckBox.Visible = GameService.ArcDps.RenderPresent;
             if (_killProofQuickMenu != null)
                 _killProofQuickMenu.Visible = GameService.GameIntegration.IsInGame &&
-                                              GameService.ArcDps.Common.PlayersInSquad.Count != 0 &&
-                                              _myTokenQuantityRepository != null;
+                                              GameService.ArcDps.Common.PlayersInSquad.Count != 0;
         }
 
         private async Task<(bool, T)> GetJsonResponse<T>(string request)
@@ -414,14 +412,14 @@ namespace KillProofModule
 
         private async Task<KillProof> GetKillProofContent(string account)
         {
-            if (_cachedKillProofs.Any(x => x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase)))
+            if (_cachedKillProofs.Any(x => x.AccountName.Equals(account, StringComparison.InvariantCultureIgnoreCase)))
                 return _cachedKillProofs.FirstOrDefault(x =>
-                    x.account_name.Equals(account, StringComparison.InvariantCultureIgnoreCase));
+                    x.AccountName.Equals(account, StringComparison.InvariantCultureIgnoreCase));
 
-            var (responseSuccess, killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}")
+            var (responseSuccess, killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value)
                 .ConfigureAwait(false);
 
-            if (responseSuccess && killProof?.error == null)
+            if (responseSuccess && killProof?.Error == null)
             {
                 _cachedKillProofs.Add(killProof);
                 return killProof;
@@ -435,9 +433,9 @@ namespace KillProofModule
         private async Task<bool> ProfileAvailable(string account)
         {
             var (responseSuccess, optionalKillProof) =
-                await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}");
+                await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value);
 
-            return responseSuccess && optionalKillProof?.error == null;
+            return responseSuccess && optionalKillProof?.Error == null;
         }
 
         private void PlayerAddedEvent(CommonFields.Player player)
@@ -827,80 +825,69 @@ namespace KillProofModule
                     CanScroll = true,
                     ShowTint = true
                 };
-                currentAccountName.Text = currentAccount.account_name;
+                currentAccountName.Text = currentAccount.AccountName;
                 currentAccountLastRefresh.Text =
-                    "Last Refresh: " + $"{currentAccount.last_refresh:dddd, d. MMMM yyyy - HH:mm:ss}";
-                currentAccountKpId.Text = "ID: " + currentAccount.kpid;
-                currentAccountProofUrl.Text = currentAccount.proof_url;
+                    "Last Refresh: " + $"{currentAccount.LastRefresh:dddd, d. MMMM yyyy - HH:mm:ss}";
+                currentAccountKpId.Text = "ID: " + currentAccount.KpId;
+                currentAccountProofUrl.Text = currentAccount.ProofUrl;
 
-                if (currentAccount.killproofs != null)
+                if (currentAccount.Killproofs != null)
                 {
-                    foreach (var killproof in currentAccount.killproofs)
-                        if (killproof.Value > 0)
+                    foreach (var killproof in currentAccount.Killproofs)
+                    {
+                        var killProofButton = new KillProofButton
                         {
-                            var killProofButton = new KillProofButton
-                            {
-                                Parent = contentPanel,
-                                Icon = GetTokenRender(_resources.GetToken(killproof.Key).Id),
-                                Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                                    ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
-                                Text = killproof.Value.ToString(),
-                                BottomText = killproof.Key
-                            };
-
-                            _displayedKillProofs.Add(killProofButton);
-                        }
+                            Parent = contentPanel,
+                            Icon = GetTokenRender(killproof.Id),
+                            Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
+                                ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                            Text = killproof.Name,
+                            BottomText = killproof.Amount.ToString()
+                        };
+                        _displayedKillProofs.Add(killProofButton);
+                    }
                 }
                 else
                 {
                     // TODO: Show button indicating that killproofs were explicitly hidden
-                    Logger.Info($"Player '{currentAccount.account_name}' has LI details explicitly hidden.");
+                    Logger.Info($"Player '{currentAccount.AccountName}' has LI details explicitly hidden.");
                 }
 
-                if (currentAccount.tokens != null)
+                if (currentAccount.Tokens != null)
                 {
-                    foreach (var token in currentAccount.tokens)
-                        if (token.Value > 0)
+                    foreach (var token in currentAccount.Tokens)
+                    {
+                        var killProofButton = new KillProofButton
                         {
-                            var killProofButton = new KillProofButton
-                            {
-                                Parent = contentPanel,
-                                Icon = GetTokenRender(_resources.GetToken(token.Key).Id),
-                                Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                                    ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
-                                Text = token.Value.ToString(),
-                                BottomText = token.Key
-                            };
+                            Parent = contentPanel,
+                            Icon = GetTokenRender(token.Id),
+                            Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
+                                ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                            Text = token.Name,
+                            BottomText = token.Amount.ToString()
+                        };
 
-                            _displayedKillProofs.Add(killProofButton);
-                        }
-                }
-                else
-                {
+                        _displayedKillProofs.Add(killProofButton);
+                    }
+                } else {
                     // TODO: Show button indicating that tokens were explicitly hidden
-                    Logger.Info($"Player '{currentAccount.account_name}' has tokens explicitly hidden.");
+                    Logger.Info($"Player '{currentAccount.AccountName}' has tokens explicitly hidden.");
                 }
 
-                if (currentAccount.titles != null)
-                    foreach (var token in currentAccount.titles)
+                if (currentAccount.Titles != null)
+                    foreach (var title in currentAccount.Titles)
                     {
                         var titleButton = new KillProofButton
                         {
                             Parent = contentPanel,
                             Font = GameService.Content.DefaultFont16,
-                            Text = token.Key,
-                            BottomText = token.Value,
+                            Text = title.Name,
+                            BottomText = title.Mode,
                             IsTitleDisplay = true
                         };
 
-                        switch (token.Value)
+                        switch (title.Mode)
                         {
-                            case "token":
-                                titleButton.Icon = _sortByTokenTexture;
-                                break;
-                            case "title":
-                                titleButton.Icon = _sortByTitleTexture;
-                                break;
                             case "raid":
                                 titleButton.Icon = _sortByRaidTexture;
                                 break;
@@ -913,7 +900,7 @@ namespace KillProofModule
                     }
                 else // TODO: Show text indicating that titles were explicitly hidden
                     Logger.Info(
-                        $"Player '{currentAccount.account_name}' has titles and achievements explicitly hidden.");
+                        $"Player '{currentAccount.AccountName}' has titles and achievements explicitly hidden.");
 
                 RepositionKillProofs();
 
@@ -1054,15 +1041,15 @@ namespace KillProofModule
                     _displayedKillProofs.Sort((e1, e2) =>
                         string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs)
-                        e1.Visible = _currentProfile.killproofs != null &&
-                                     _currentProfile.killproofs.Any(x => x.Key.Equals(e1.BottomText));
+                        e1.Visible = _currentProfile.Killproofs != null &&
+                                     _currentProfile.Killproofs.Any(x => x.Name.Equals(e1.BottomText));
                     break;
                 case SORTBY_TOKEN:
                     _displayedKillProofs.Sort((e1, e2) =>
                         string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs)
-                        e1.Visible = _currentProfile.tokens != null &&
-                                     _currentProfile.tokens.Any(x => x.Key.Equals(e1.BottomText));
+                        e1.Visible = _currentProfile.Tokens != null &&
+                                     _currentProfile.Tokens.Any(x => x.Name.Equals(e1.BottomText));
                     break;
                 case SORTBY_TITLE:
                     _displayedKillProofs.Sort((e1, e2) =>
@@ -1124,33 +1111,7 @@ namespace KillProofModule
         {
             var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
             _myKillProof = await GetKillProofContent(player.AccountName);
-            var killproofs = _myKillProof.tokens.MergeLeft(_myKillProof.killproofs);
-            _myTokenQuantityRepository = new Dictionary<Token, int>();
-            foreach (var pair in killproofs) _myTokenQuantityRepository.Add(_resources.GetToken(pair.Key), pair.Value);
         }
-
-        private int GetMyQuantity(Token token)
-        {
-            if (!GameService.ArcDps.Loaded || GameService.ArcDps.Common.PlayersInSquad.Count == 0 ||
-                _myTokenQuantityRepository == null) return 0;
-            try
-            {
-                return _myTokenQuantityRepository.Any(x => x.Key.Equals(token)) ? _myTokenQuantityRepository[token] : 0;
-            }
-            catch (KeyNotFoundException ex)
-            {
-                Logger.Warn(ex.Message);
-                return 0;
-            }
-        }
-
-        private KeyValuePair<Token, int> GetMyTokenQuantityPair(string name)
-        {
-            name = name.Split('|').Reverse().ToList()[0].Trim();
-            return _myTokenQuantityRepository.FirstOrDefault(x =>
-                x.Key.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-        }
-
         private Panel BuildKillProofQuickMenu()
         {
             var bgPanel = new Panel
@@ -1218,8 +1179,7 @@ namespace KillProofModule
 
             dropdown.ValueChanged += delegate
             {
-                var value = GetMyQuantity(_resources.GetToken(dropdown.SelectedItem));
-                quantity.Text = value + "";
+                quantity.Text = _myKillProof.GetTokenAmount(dropdown.SelectedItem).ToString();
             };
             dropdown.SelectedItem = "Legendary Insight";
             var sendButton = new Image
@@ -1290,7 +1250,7 @@ namespace KillProofModule
                     var tokenSelection = wing.GetTokens();
                     var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
                     chatLink.ItemId = singleRandomToken.Id;
-                    var amount = GetMyQuantity(singleRandomToken);
+                    var amount = _myKillProof.GetTokenAmount(singleRandomToken.Id);
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0
                         ? RandomUtil.GetRandom(0, 10) > 7 ? rest : 250
@@ -1299,10 +1259,10 @@ namespace KillProofModule
                 }
                 else
                 {
-                    var tokenQuantityPair = GetMyTokenQuantityPair(dropdown.SelectedItem);
-                    if (tokenQuantityPair.Equals(default) || tokenQuantityPair.Key == null) return;
-                    chatLink.ItemId = tokenQuantityPair.Key.Id;
-                    var amount = tokenQuantityPair.Value;
+                    var token = _myKillProof.GetToken(dropdown.SelectedItem);
+                    if (token.Equals(default)) return;
+                    chatLink.ItemId = token.Id;
+                    var amount = token.Amount;
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0
                         ? RandomUtil.GetRandom(0, 10) > 7 ? rest : 250
@@ -1356,13 +1316,13 @@ namespace KillProofModule
 
                     chatLink.Quantity = Convert.ToByte(1);
                     GameService.GameIntegration.Chat.Send(
-                        $"Total: {GetMyQuantity(singleRandomToken)} of {chatLink} (killproof.me/{_myKillProof.kpid})");
+                        $"Total: {_myKillProof.GetTokenAmount(singleRandomToken.Id)} of {chatLink} (killproof.me/{_myKillProof.KpId})");
                 }
                 else
                 {
-                    var tokenQuantityPair = GetMyTokenQuantityPair(dropdown.SelectedItem);
-                    if (tokenQuantityPair.Equals(default) || tokenQuantityPair.Key == null) return;
-                    chatLink.ItemId = tokenQuantityPair.Key.Id;
+                    var token = _myKillProof.GetToken(dropdown.SelectedItem);
+                    if (token.Equals(default)) return;
+                    chatLink.ItemId = token.Id;
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId))
                     {
                         var cooldown = DateTimeOffset.Now.Subtract(timeOutRightSend[chatLink.ItemId]);
@@ -1374,7 +1334,7 @@ namespace KillProofModule
                             var secondWord = timeLeft.Seconds > 9 ? $"{timeLeft:ss} seconds" :
                                 timeLeft.Seconds > 1 ? $"{timeLeft:%s} seconds" : $"{timeLeft:%s} second";
                             ScreenNotification.ShowNotification(
-                                $"You can't send your {tokenQuantityPair.Key.Name} total\nwithin the next{minuteWord} {secondWord} again.",
+                                $"You can't send your {token.Name} total\nwithin the next{minuteWord} {secondWord} again.",
                                 ScreenNotification.NotificationType.Error);
                             return;
                         }
@@ -1388,14 +1348,14 @@ namespace KillProofModule
 
                     chatLink.Quantity = Convert.ToByte(1);
                     GameService.GameIntegration.Chat.Send(
-                        $"Total: {tokenQuantityPair.Value} of {chatLink} (killproof.me/{_myKillProof.kpid})");
+                        $"Total: {token.Amount} of {chatLink} (killproof.me/{_myKillProof.KpId})");
                 }
             };
             bgPanel.Disposed += delegate { GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 0.0f}, 0.2f); };
             bgPanel.PropertyChanged += delegate
             {
                 if (!bgPanel.Visible) return;
-                quantity.Text = GetMyQuantity(_resources.GetToken(dropdown.SelectedItem)).ToString();
+                quantity.Text = _myKillProof.GetTokenAmount(dropdown.SelectedItem).ToString();
             };
             return bgPanel;
         }
