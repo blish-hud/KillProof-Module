@@ -22,7 +22,7 @@ namespace KillProofModule.Persistance
     }
     internal class Title
     {
-        [JsonConverter(typeof(StringEnumConverter)), JsonProperty("mode")] public string Mode { get; set; }
+        [JsonConverter(typeof(StringEnumConverter)), JsonProperty("mode")] public Mode Mode { get; set; }
         [JsonProperty("id")] public int Id { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
     }
