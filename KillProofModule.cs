@@ -144,6 +144,10 @@ namespace KillProofModule
             SmartPingMenuRightclickSendMessage = Properties.Resources.Total___0__of__1___killproof_me__2__;
 
             //TODO: Implement as View so panel reloads automatically.
+            _killProofQuickMenu?.Dispose();
+            if (_killProofQuickMenuEnabled.Value)
+                _killProofQuickMenu = BuildKillProofQuickMenu();
+
             _modulePanel?.Dispose();
             _modulePanel = BuildHomePanel(GameService.Overlay.BlishHudWindow);
 

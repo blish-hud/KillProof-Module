@@ -97,7 +97,7 @@ namespace KillProofModule.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die ID:  ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die ID: ähnelt.
         /// </summary>
         internal static string ID_ {
             get {
