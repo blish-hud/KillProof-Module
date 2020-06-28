@@ -135,7 +135,7 @@ namespace KillProofModule
             KpIdText = Properties.Resources.ID_;
             NotYetRegisteredText = Properties.Resources.Not_yet_registered___;
             VisitUsAndHelpText = Properties.Resources.Visit_www_killproof_me_and_allow_us_to_record_your_KillProofs_for_you_;
-            NoProfileFoundText = Properties.Resources.No_profile_for____0____found___;
+            NoProfileFoundText = Properties.Resources.No_profile_for___0___found___;
             PleaseShareSiteText = Properties.Resources.Please__share_www_killproof_me_with_this_player_and_help_expand_our_database_;
             ProfileBackButtonNavTitle = Properties.Resources.Profile;
             LoadingLabel = Properties.Resources.Loading___;
@@ -143,7 +143,6 @@ namespace KillProofModule
             SmartPingMenuRandomizeButtonTooltip = Properties.Resources.Random_token_from_selected_wing_when_pressing_Send_To_Chat__nLeft_Click__Toggle_nRight_Click__Iterate_wings;
             SmartPingMenuRightclickSendMessage = Properties.Resources.Total___0__of__1___killproof_me__2__;
 
-            //TODO: Implement as View so panel reloads automatically.
             _killProofQuickMenu?.Dispose();
             if (_killProofQuickMenuEnabled.Value)
                 _killProofQuickMenu = BuildKillProofQuickMenu();
@@ -480,7 +479,17 @@ namespace KillProofModule
                 return _cachedKillProofs.FirstOrDefault(x =>
                     x.AccountName.Equals(account, StringComparison.InvariantCultureIgnoreCase));
 
-            var (responseSuccess, killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value)
+            string locale;
+            switch (GameService.Overlay.UserLocale.Value) {
+                case Gw2Sharp.WebApi.Locale.English: locale = "en"; break;
+                case Gw2Sharp.WebApi.Locale.German: locale = "de"; break;
+                case Gw2Sharp.WebApi.Locale.French: locale = "fr"; break;
+                case Gw2Sharp.WebApi.Locale.Spanish: locale = "es"; break;
+                case Gw2Sharp.WebApi.Locale.Korean: locale = "ko"; break;
+                case Gw2Sharp.WebApi.Locale.Chinese: locale = "zh"; break;
+                default: locale = "en"; break;
+            }
+            var (responseSuccess, killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + locale)
                 .ConfigureAwait(false);
 
             if (responseSuccess && killProof?.Error == null)
@@ -488,7 +497,6 @@ namespace KillProofModule
                 _cachedKillProofs.Add(killProof);
                 return killProof;
             }
-
             return null;
         }
 
@@ -851,7 +859,7 @@ namespace KillProofModule
                     Size = LABEL_SMALL,
                     HorizontalAlignment = HorizontalAlignment.Left,
                     Location = new Point(LEFT_MARGIN, footer.Height / 2 - LABEL_SMALL.Y / 2),
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size8,
+                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size11,
                         ContentService.FontStyle.Regular),
                     Text = ""
                 };
@@ -860,8 +868,8 @@ namespace KillProofModule
                     Parent = footer,
                     Size = LABEL_SMALL,
                     HorizontalAlignment = HorizontalAlignment.Left,
-                    Location = new Point(LEFT_MARGIN, footer.Height / 2 - LABEL_SMALL.Y / 2 + BOTTOM_MARGIN),
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size8,
+                    Location = new Point(LEFT_MARGIN, currentAccountKpId.Location.Y + BOTTOM_MARGIN + 2),
+                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size11,
                         ContentService.FontStyle.Regular),
                     Text = ""
                 };
@@ -902,7 +910,7 @@ namespace KillProofModule
                             Parent = contentPanel,
                             Icon = GetTokenRender(killproof.Id),
                             Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                                ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                                ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                             Text = killproof.Name,
                             BottomText = killproof.Amount.ToString()
                         };
@@ -924,7 +932,7 @@ namespace KillProofModule
                             Parent = contentPanel,
                             Icon = GetTokenRender(token.Id),
                             Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                                ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                                ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                             Text = token.Name,
                             BottomText = token.Amount.ToString()
                         };
@@ -961,8 +969,7 @@ namespace KillProofModule
                         _displayedKillProofs.Add(titleButton);
                     }
                 else // TODO: Show text indicating that titles were explicitly hidden
-                    Logger.Info(
-                        $"Player '{currentAccount.AccountName}' has titles and achievements explicitly hidden.");
+                    Logger.Info($"Player '{currentAccount.AccountName}' has titles and achievements explicitly hidden.");
 
                 RepositionKillProofs();
 
@@ -1103,14 +1110,14 @@ namespace KillProofModule
                         string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs)
                         e1.Visible = _currentProfile.Killproofs != null &&
-                                     _currentProfile.Killproofs.Any(x => x.Name.Equals(e1.BottomText));
+                                     _currentProfile.Killproofs.Any(x => x.Name.Equals(e1.Text, StringComparison.InvariantCultureIgnoreCase));
                     break;
                 case SORTBY_TOKEN:
                     _displayedKillProofs.Sort((e1, e2) =>
                         string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs)
                         e1.Visible = _currentProfile.Tokens != null &&
-                                     _currentProfile.Tokens.Any(x => x.Name.Equals(e1.BottomText));
+                                     _currentProfile.Tokens.Any(x => x.Name.Equals(e1.Text, StringComparison.InvariantCultureIgnoreCase));
                     break;
                 case SORTBY_TITLE:
                     _displayedKillProofs.Sort((e1, e2) =>
@@ -1240,7 +1247,8 @@ namespace KillProofModule
 
             dropdown.ValueChanged += delegate
             {
-                quantity.Text = _myKillProof.GetTokenAmount(dropdown.SelectedItem).ToString();
+                if (_myKillProof != null)
+                    quantity.Text = _myKillProof.GetTokenAmount(dropdown.SelectedItem).ToString();
             };
             dropdown.SelectedItem = dropdown.Items[0];
             var sendButton = new Image

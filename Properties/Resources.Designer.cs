@@ -97,7 +97,7 @@ namespace KillProofModule.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die ID: ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die ID:  ähnelt.
         /// </summary>
         internal static string ID_ {
             get {
@@ -142,11 +142,11 @@ namespace KillProofModule.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die No profile for \&quot;{0}\&quot; found :( ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die No profile for &quot;{0}&quot; found :( ähnelt.
         /// </summary>
-        internal static string No_profile_for____0____found___ {
+        internal static string No_profile_for___0___found___ {
             get {
-                return ResourceManager.GetString("No profile for \\\"{0}\\\" found :(", resourceCulture);
+                return ResourceManager.GetString("No profile for \"{0}\" found :(", resourceCulture);
             }
         }
         
