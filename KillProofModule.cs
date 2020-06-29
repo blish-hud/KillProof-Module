@@ -144,7 +144,7 @@ namespace KillProofModule
             SmartPingMenuRightclickSendMessage = Properties.Resources.Total___0__of__1___killproof_me__2__;
 
             _killProofQuickMenu?.Dispose();
-            if (_killProofQuickMenuEnabled.Value)
+            if (_killProofQuickMenuEnabled.Value && _myKillProof != null)
                 _killProofQuickMenu = BuildKillProofQuickMenu();
 
             _modulePanel?.Dispose();
@@ -206,7 +206,6 @@ namespace KillProofModule
                     }
 
                     await Task.Run(LoadTokenIcons);
-                    if (_killProofQuickMenuEnabled.Value) _killProofQuickMenu = BuildKillProofQuickMenu();
                 });
 
             await Task.Run(LoadProfessionIcons);
@@ -479,17 +478,7 @@ namespace KillProofModule
                 return _cachedKillProofs.FirstOrDefault(x =>
                     x.AccountName.Equals(account, StringComparison.InvariantCultureIgnoreCase));
 
-            string locale;
-            switch (GameService.Overlay.UserLocale.Value) {
-                case Gw2Sharp.WebApi.Locale.English: locale = "en"; break;
-                case Gw2Sharp.WebApi.Locale.German: locale = "de"; break;
-                case Gw2Sharp.WebApi.Locale.French: locale = "fr"; break;
-                case Gw2Sharp.WebApi.Locale.Spanish: locale = "es"; break;
-                case Gw2Sharp.WebApi.Locale.Korean: locale = "ko"; break;
-                case Gw2Sharp.WebApi.Locale.Chinese: locale = "zh"; break;
-                default: locale = "en"; break;
-            }
-            var (responseSuccess, killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + locale)
+            var (responseSuccess, killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value)
                 .ConfigureAwait(false);
 
             if (responseSuccess && killProof?.Error == null)
@@ -604,7 +593,7 @@ namespace KillProofModule
                 _smartPingCheckBox.CheckedChanged += delegate(object sender, CheckChangedEvent e)
                 {
                     _killProofQuickMenuEnabled.Value = e.Checked;
-                    if (e.Checked)
+                    if (e.Checked && _myKillProof != null)
                         _killProofQuickMenu = BuildKillProofQuickMenu();
                     else
                         _killProofQuickMenu?.Dispose();
@@ -1178,7 +1167,12 @@ namespace KillProofModule
         private async void LoadMyKillProof()
         {
             var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
-            _myKillProof = await GetKillProofContent(player.AccountName);
+            await GetKillProofContent(player.AccountName).ContinueWith((result) =>
+            {
+                if (!result.IsCompleted) return;
+                _myKillProof = result.Result;
+                if (_killProofQuickMenuEnabled.Value) _killProofQuickMenu = BuildKillProofQuickMenu();
+            });
         }
         private Panel BuildKillProofQuickMenu()
         {
@@ -1236,7 +1230,7 @@ namespace KillProofModule
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Top
             };
-            foreach (var token in _resources.GetAllTokens())
+            foreach (var token in _myKillProof.GetAllTokens())
             {
                 var wing = _resources.GetWing(token);
                 if (wing != null)
@@ -1247,8 +1241,7 @@ namespace KillProofModule
 
             dropdown.ValueChanged += delegate
             {
-                if (_myKillProof != null)
-                    quantity.Text = _myKillProof.GetTokenAmount(dropdown.SelectedItem).ToString();
+                quantity.Text = _myKillProof?.GetToken(dropdown.SelectedItem)?.Amount.ToString() ?? "0";
             };
             dropdown.SelectedItem = dropdown.Items[0];
             var sendButton = new Image
@@ -1314,10 +1307,12 @@ namespace KillProofModule
                 if (randomizeButton.BackgroundColor == Color.LightGreen)
                 {
                     var wing = _resources.GetWing(randomizeButton.Text);
-                    var tokenSelection = wing.GetTokens();
+                    var wingTokens = wing.GetTokens();
+                    var tokenSelection = _myKillProof.GetAllTokens().Where(x => wingTokens.Any(y => y.Id.Equals(x.Id))).ToList();
+                    if (tokenSelection.Count == 0) return;
                     var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
                     chatLink.ItemId = singleRandomToken.Id;
-                    var amount = _myKillProof.GetTokenAmount(singleRandomToken.Id);
+                    var amount = _myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0;
                     var rest = amount % 250;
                     chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0
                         ? RandomUtil.GetRandom(0, 10) > 7 ? rest : 250
@@ -1327,7 +1322,7 @@ namespace KillProofModule
                 else
                 {
                     var token = _myKillProof.GetToken(dropdown.SelectedItem);
-                    if (token.Equals(default)) return;
+                    if (token == null) return;
                     chatLink.ItemId = token.Id;
                     var amount = token.Amount;
                     var rest = amount % 250;
@@ -1355,7 +1350,9 @@ namespace KillProofModule
                 if (randomizeButton.BackgroundColor == Color.LightGreen)
                 {
                     var wing = _resources.GetWing(randomizeButton.Text);
-                    var tokenSelection = wing.GetTokens();
+                    var wingTokens = wing.GetTokens();
+                    var tokenSelection = _myKillProof.GetAllTokens().Where(x => wingTokens.Any(y => y.Id.Equals(x.Id))).ToList();
+                    if (tokenSelection.Count == 0) return;
                     var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
                     chatLink.ItemId = singleRandomToken.Id;
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId))
@@ -1383,12 +1380,12 @@ namespace KillProofModule
 
                     chatLink.Quantity = Convert.ToByte(1);
                     GameService.GameIntegration.Chat.Send(
-                        $"Total: {_myKillProof.GetTokenAmount(singleRandomToken.Id)} of {chatLink} (killproof.me/{_myKillProof.KpId})");
+                        $"Total: {_myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0} of {chatLink} (killproof.me/{_myKillProof.KpId})");
                 }
                 else
                 {
                     var token = _myKillProof.GetToken(dropdown.SelectedItem);
-                    if (token.Equals(default)) return;
+                    if (token == null) return;
                     chatLink.ItemId = token.Id;
                     if (timeOutRightSend.Any(x => x.Key == chatLink.ItemId))
                     {
@@ -1421,8 +1418,8 @@ namespace KillProofModule
             bgPanel.Disposed += delegate { GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 0.0f}, 0.2f); };
             bgPanel.PropertyChanged += delegate
             {
-                if (!bgPanel.Visible) return;
-                quantity.Text = _myKillProof.GetTokenAmount(dropdown.SelectedItem).ToString();
+                if (!bgPanel.Visible || _myKillProof == null) return;
+                quantity.Text = _myKillProof.GetToken(dropdown.SelectedItem)?.Amount.ToString() ?? "0";
             };
             return bgPanel;
         }

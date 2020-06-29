@@ -214,7 +214,9 @@ namespace KillProofModule.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Random token from selected wing when pressing Send To Chat.\nLeft-Click: Toggle\nRight-Click: Iterate wings ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die Random token from selected wing when pressing Send To Chat.
+        ///Left-Click: Toggle
+        ///Right-Click: Iterate wings ähnelt.
         /// </summary>
         internal static string Random_token_from_selected_wing_when_pressing_Send_To_Chat__nLeft_Click__Toggle_nRight_Click__Iterate_wings {
             get {
@@ -242,7 +244,9 @@ namespace KillProofModule.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Send To Chat\nLeft-Click: Only send code up to a stack&apos;s worth (250x). \nRight-Click: Send killproof.me total amount. ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die Send To Chat
+        ///Left-Click: Only send code up to a stack&apos;s worth (250x).
+        ///Right-Click: Send killproof.me total amount. ähnelt.
         /// </summary>
         internal static string Send_To_Chat_nLeft_Click__Only_send_code_up_to_a_stack_s_worth__250x____nRight_Click__Send_killproof_me_total_amount_ {
             get {
