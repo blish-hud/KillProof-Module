@@ -36,20 +36,18 @@ namespace KillProofModule.Persistance
         [JsonProperty("last_refresh")] public DateTime LastRefresh { get; set; }
         [JsonProperty("account_name")] public string AccountName { get; set; }
         [JsonProperty("error")] public string Error { get; set; }
-
-        public int GetTokenAmount(int id)
+        public Token GetToken(int id)
         {
-            return Tokens.Concat(Killproofs).FirstOrDefault(x => x.Id == id)?.Amount ?? 0;
-        }
-        public int GetTokenAmount(string name)
-        {
-            name = name.Split('|').Reverse().ToList()[0].Trim();
-            return Tokens.Concat(Killproofs).FirstOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))?.Amount ?? 0;
+            return GetAllTokens().FirstOrDefault(x => x.Id == id);
         }
         public Token GetToken(string name)
         {
             name = name.Split('|').Reverse().ToList()[0].Trim();
-            return Tokens.Concat(Killproofs).FirstOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return GetAllTokens().FirstOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        }
+        public IEnumerable<Token> GetAllTokens()
+        {
+            return Killproofs.Concat(Tokens);
         }
     }
 }

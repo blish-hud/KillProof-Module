@@ -36,7 +36,7 @@ namespace KillProofModule.Persistance
         public Wing GetWing(Token token)
         {
             return GetAllWings().FirstOrDefault(wing => wing.Events.Where(encounter => encounter?.Token != null)
-                .Any(encounters => encounters.Token.Equals(token)));
+                .Any(encounters => encounters.Token.Id.Equals(token.Id)));
         }
 
         public IEnumerable<Wing> GetAllWings()
@@ -93,9 +93,9 @@ namespace KillProofModule.Persistance
         [JsonProperty("mapid")] public int Mapid { get; set; }
         [JsonProperty("events")] public IList<Event> Events { get; set; }
 
-        public IList<Token> GetTokens()
+        public IEnumerable<Token> GetTokens()
         {
-            return Events.Where(encounter => encounter.Token != null).Select(encounters => encounters.Token).ToList();
+            return Events.Where(encounter => encounter.Token != null).Select(encounters => encounters.Token);
         }
     }
 

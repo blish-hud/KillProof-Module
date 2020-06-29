@@ -184,17 +184,9 @@
     <value>Loading ..</value>
     <comment>Loading label</comment>
   </data>
-  <data name="Send To Chat\nLeft-Click: Only send code up to a stack&apos;s worth (250x). \nRight-Click: Send killproof.me total amount." xml:space="preserve">
-    <value>Send To Chat\nLeft-Click: Only send code up to a stack&apos;s worth (250x). \nRight-Click: Send killproof.me total amount.</value>
-    <comment>Smart Ping Menu: Send Button tooltip.</comment>
-  </data>
-  <data name="Random token from selected wing when pressing Send To Chat.\nLeft-Click: Toggle\nRight-Click: Iterate wings" xml:space="preserve">
-    <value>Random token from selected wing when pressing Send To Chat.\nLeft-Click: Toggle\nRight-Click: Iterate wings</value>
-    <comment>Smart Ping Menu: Randomize Button tooltip.</comment>
-  </data>
   <data name="Total: {0} of {1} (killproof.me/{2})" xml:space="preserve">
     <value>Total: {0} of {1} (killproof.me/{2})</value>
-    <comment>Smart Ping Menu: Chat message on right click send. Ex. &quot;Total 250 of Legendary Insight (profile link)&quot;</comment>
+    <comment>Smart Ping Menu: Chat message on right click send. Ex. "Total 250 of Legendary Insight (profile link)"</comment>
   </data>
   <data name="Everything" xml:space="preserve">
     <value>Everything</value>
@@ -220,7 +212,19 @@
     <value>profile available</value>
   </data>
   <data name="No profile for &quot;{0}&quot; found :(" xml:space="preserve">
-    <value>No profile for &quot;{0}&quot; found :(</value>
+    <value>No profile for "{0}" found :(</value>
     <comment>{0} will be swapped with account name.</comment>
+  </data>
+  <data name="Send To Chat\nLeft-Click: Only send code up to a stack's worth (250x). \nRight-Click: Send killproof.me total amount." xml:space="preserve">
+    <value>Send To Chat
+Left-Click: Only send code up to a stack's worth (250x).
+Right-Click: Send killproof.me total amount.</value>
+    <comment>Smart Ping Menu: Send Button tooltip.</comment>
+  </data>
+  <data name="Random token from selected wing when pressing Send To Chat.\nLeft-Click: Toggle\nRight-Click: Iterate wings" xml:space="preserve">
+    <value>Random token from selected wing when pressing Send To Chat.
+Left-Click: Toggle
+Right-Click: Iterate wings</value>
+    <comment>Smart Ping Menu: Randomize Button tooltip.</comment>
   </data>
 </root>
