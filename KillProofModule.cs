@@ -36,13 +36,6 @@ namespace KillProofModule
         private const int BOTTOM_MARGIN = 10;
         private const int LEFT_MARGIN = 8;
 
-        private const string SORTBY_ALL = "Everything";
-        private const string SORTBY_KILLPROOF = "KillProofs";
-        private const string SORTBY_TOKEN = "Tokens";
-        private const string SORTBY_TITLE = "Titles";
-        private const string SORTBY_RAID = "Raid Titles";
-        private const string SORTBY_FRACTAL = "Fractal Titles";
-
         // Max profile buttons on SquadPanel before dequeuing FiFo behavior.
         private const int MAX_PLAYERS = 15;
 
@@ -70,7 +63,7 @@ namespace KillProofModule
         private Checkbox _smartPingCheckBox;
 
         private Panel _squadPanel;
-        private string CurrentSortMethod = SORTBY_ALL;
+        private string CurrentSortMethod;
         private Dictionary<int, AsyncTexture2D> EliteRenderRepository;
         private readonly Point LABEL_BIG = new Point(400, 40);
         private readonly Point LABEL_SMALL = new Point(400, 30);
@@ -91,6 +84,13 @@ namespace KillProofModule
                 SmartPingMenuSettingDisplayName, SmartPingMenuSettingDescription);
         }
 
+        #region Localization
+        private string SORTBY_ALL;
+        private string SORTBY_KILLPROOF;
+        private string SORTBY_TOKEN;
+        private string SORTBY_TITLE;
+        private string SORTBY_RAID;
+        private string SORTBY_FRACTAL;
         private string SmartPingMenuSettingDisplayName;
         private string SmartPingMenuSettingDescription;
         private string KillProofTabName;
@@ -142,6 +142,14 @@ namespace KillProofModule
             SmartPingMenuRandomizeButtonTooltip = Properties.Resources.Random_token_from_selected_wing_when_pressing_Send_To_Chat__nLeft_Click__Toggle_nRight_Click__Iterate_wings;
             SmartPingMenuRightclickSendMessage = Properties.Resources.Total___0__of__1___killproof_me__2__;
 
+            SORTBY_ALL = Properties.Resources.Everything;
+            SORTBY_KILLPROOF = Properties.Resources.KillProof;
+            SORTBY_TOKEN = Properties.Resources.Tokens;
+            SORTBY_TITLE = Properties.Resources.Titles;
+            SORTBY_RAID = Properties.Resources.Raid_Titles;
+            SORTBY_FRACTAL = Properties.Resources.Fractal_Titles;
+            CurrentSortMethod = SORTBY_ALL;
+
             LoadResources();
 
             _killProofQuickMenu?.Dispose();
@@ -156,6 +164,8 @@ namespace KillProofModule
 
             _killProofTab = GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture, _modulePanel, 0);
         }
+        #endregion
+
         private void LoadTextures()
         {
             _killProofIconTexture = ContentsManager.GetTexture("killproof_icon.png");
@@ -199,7 +209,7 @@ namespace KillProofModule
             await GetJsonResponse<Resources>(KILLPROOF_API_URL + "resources?lang=" + GameService.Overlay.UserLocale.Value)
                 .ContinueWith(async result =>
                 {
-                    if (!result.IsCompleted && !result.Result.Item1)
+                    if (!result.IsCompleted || !result.Result.Item1)
                     {
                         using (var fs = ContentsManager.GetFileStream("resources.json")) {
                             fs.Position = 0;
@@ -1085,51 +1095,40 @@ namespace KillProofModule
         private void UpdateSort(object sender, EventArgs e)
         {
             if (sender != null) CurrentSortMethod = ((Control) sender).BasicTooltipText;
-            switch (CurrentSortMethod)
-            {
-                case SORTBY_ALL:
-                    _displayedKillProofs.Sort((e1, e2) =>
-                    {
-                        var result = e1.IsTitleDisplay.CompareTo(e2.IsTitleDisplay);
-                        if (result != 0) return result;
-                        return string.Compare(e1.BottomText, e2.BottomText,
-                            StringComparison.InvariantCultureIgnoreCase);
-                    });
-                    foreach (var e1 in _displayedKillProofs) e1.Visible = true;
-                    break;
-                case SORTBY_KILLPROOF:
+            if (CurrentSortMethod.Equals(SORTBY_ALL, StringComparison.InvariantCultureIgnoreCase)) {
+                _displayedKillProofs.Sort((e1, e2) =>
+                {
+                    var result = e1.IsTitleDisplay.CompareTo(e2.IsTitleDisplay);
+                    if (result != 0) return result;
+                    return string.Compare(e1.BottomText, e2.BottomText,
+                        StringComparison.InvariantCultureIgnoreCase);
+                });
+                foreach (var e1 in _displayedKillProofs) e1.Visible = true;
+            } else if (CurrentSortMethod.Equals(SORTBY_KILLPROOF, StringComparison.InvariantCultureIgnoreCase)) {
                     _displayedKillProofs.Sort((e1, e2) =>
                         string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs)
                         e1.Visible = _currentProfile.Killproofs != null &&
                                      _currentProfile.Killproofs.Any(x => x.Name.Equals(e1.Text, StringComparison.InvariantCultureIgnoreCase));
-                    break;
-                case SORTBY_TOKEN:
+            } else if (CurrentSortMethod.Equals(SORTBY_TOKEN, StringComparison.InvariantCultureIgnoreCase)) {
                     _displayedKillProofs.Sort((e1, e2) =>
                         string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs)
                         e1.Visible = _currentProfile.Tokens != null &&
                                      _currentProfile.Tokens.Any(x => x.Name.Equals(e1.Text, StringComparison.InvariantCultureIgnoreCase));
-                    break;
-                case SORTBY_TITLE:
+            } else if (CurrentSortMethod.Equals(SORTBY_TITLE, StringComparison.InvariantCultureIgnoreCase)) {
                     _displayedKillProofs.Sort((e1, e2) =>
                         string.Compare(e1.BottomText, e2.BottomText, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs) e1.Visible = e1.IsTitleDisplay;
-                    break;
-                case SORTBY_FRACTAL:
+            } else if (CurrentSortMethod.Equals(SORTBY_FRACTAL, StringComparison.InvariantCultureIgnoreCase)) {
                     _displayedKillProofs.Sort((e1, e2) =>
                         string.Compare(e1.Text, e2.Text, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs) e1.Visible = e1.BottomText.ToLower().Contains("fractal");
-                    break;
-                case SORTBY_RAID:
+            } else if (CurrentSortMethod.Equals(SORTBY_RAID, StringComparison.InvariantCultureIgnoreCase)) {
                     _displayedKillProofs.Sort((e1, e2) =>
                         string.Compare(e1.Text, e2.Text, StringComparison.InvariantCultureIgnoreCase));
                     foreach (var e1 in _displayedKillProofs) e1.Visible = e1.BottomText.ToLower().Contains("raid");
-                    break;
-                default:
-                    throw new NotSupportedException();
             }
-
             RepositionKillProofs();
         }
 
