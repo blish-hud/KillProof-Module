@@ -1,11 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace KillProofModule.Persistance
 {
+    /// <summary>
+    ///     JSON class for replies from https://killproof.me/api/resources
+    /// </summary>
+    internal enum RaidWingEventType
+    {
+        [EnumMember(Value = "Unknown")]
+        Unknown,
+        [EnumMember(Value = "Boss")]
+        Boss,
+        [EnumMember(Value = "Checkpoint")]
+        Checkpoint
+    }
     internal class Resources
     {
         [JsonProperty("general_tokens")] public IList<Token> GeneralTokens { get; set; }
@@ -90,7 +104,7 @@ namespace KillProofModule.Persistance
     internal class Wing
     {
         [JsonProperty("id")] public string Id { get; set; }
-        [JsonProperty("mapid")] public int Mapid { get; set; }
+        [JsonProperty("map_id")] public int MapId { get; set; }
         [JsonProperty("events")] public IList<Event> Events { get; set; }
 
         public IEnumerable<Token> GetTokens()
@@ -102,14 +116,17 @@ namespace KillProofModule.Persistance
     internal class Event
     {
         [JsonProperty("id")] public string Id { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
         [JsonProperty("miniatures")] public IList<Miniature> Miniatures { get; set; }
         [JsonProperty("token")] public Token Token { get; set; }
+        [JsonConverter(typeof(StringEnumConverter)), JsonProperty("type")] public RaidWingEventType Type { get; set; }
     }
 
     internal class Miniature
     {
         [JsonProperty("id")] public int Id { get; set; }
         [JsonProperty("icon")] public string Icon { get; set; }
+        [JsonProperty("name")] public string Name { get; set; }
     }
 
     public class Token

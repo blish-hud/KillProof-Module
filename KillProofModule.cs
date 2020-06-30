@@ -47,7 +47,6 @@ namespace KillProofModule
         private const int MAX_PLAYERS = 15;
 
         private const string KILLPROOF_API_URL = "https://killproof.me/api/";
-        private const string KILLPROOF_RESOURCES_URL = "https://killproof.me/resources.json";
 
         private static readonly Logger Logger = Logger.GetLogger(typeof(KillProofModule));
 
@@ -143,6 +142,8 @@ namespace KillProofModule
             SmartPingMenuRandomizeButtonTooltip = Properties.Resources.Random_token_from_selected_wing_when_pressing_Send_To_Chat__nLeft_Click__Toggle_nRight_Click__Iterate_wings;
             SmartPingMenuRightclickSendMessage = Properties.Resources.Total___0__of__1___killproof_me__2__;
 
+            LoadResources();
+
             _killProofQuickMenu?.Dispose();
             if (_killProofQuickMenuEnabled.Value && _myKillProof != null)
                 _killProofQuickMenu = BuildKillProofQuickMenu();
@@ -188,7 +189,14 @@ namespace KillProofModule
 
         protected override async Task LoadAsync()
         {
-            await GetJsonResponse<Resources>(KILLPROOF_RESOURCES_URL)
+            await Task.Run(LoadResources);
+            await Task.Run(LoadProfessionIcons);
+            await Task.Run(LoadEliteIcons);
+        }
+
+        private async void LoadResources()
+        {
+            await GetJsonResponse<Resources>(KILLPROOF_API_URL + "resources?lang=" + GameService.Overlay.UserLocale.Value)
                 .ContinueWith(async result =>
                 {
                     if (!result.IsCompleted && !result.Result.Item1)
@@ -204,14 +212,9 @@ namespace KillProofModule
                     } else {
                         _resources = result.Result.Item2;
                     }
-
                     await Task.Run(LoadTokenIcons);
                 });
-
-            await Task.Run(LoadProfessionIcons);
-            await Task.Run(LoadEliteIcons);
         }
-
         protected override void OnModuleLoaded(EventArgs e)
         {
             ChangeLocalization(null, null);
