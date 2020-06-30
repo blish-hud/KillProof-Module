@@ -8,9 +8,8 @@ using Newtonsoft.Json.Converters;
 namespace KillProofModule.Persistance
 {
     /// <summary>
-    ///     JSON class for replies from https://killproof.me/api/
+    ///     JSON class for replies from https://killproof.me/api/kp/
     /// </summary>
-    [JsonConverter(typeof(StringEnumConverter))]
     internal enum Mode
     {
         [EnumMember(Value = "none")]
