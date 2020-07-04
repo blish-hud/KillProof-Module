@@ -1232,15 +1232,19 @@ namespace KillProofModule
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Top
             };
+            var tokenStringSorted = new List<string>();
             foreach (var token in _myKillProof.GetAllTokens())
             {
                 var wing = _resources.GetWing(token);
                 if (wing != null)
-                    dropdown.Items.Add($"W{_resources.GetAllWings().ToList().IndexOf(wing) + 1} | {token.Name}");
+                    tokenStringSorted.Add($"W{_resources.GetAllWings().ToList().IndexOf(wing) + 1} | {token.Name}");
                 else
-                    dropdown.Items.Add(token.Name);
+                    tokenStringSorted.Add(token.Name);
             }
-
+            tokenStringSorted.Sort((e1, e2) => string.Compare(e1, e2, StringComparison.InvariantCultureIgnoreCase));
+            foreach (var tokenString in tokenStringSorted) {
+                dropdown.Items.Add(tokenString);
+            }
             dropdown.ValueChanged += delegate
             {
                 quantity.Text = _myKillProof?.GetToken(dropdown.SelectedItem)?.Amount.ToString() ?? "0";
