@@ -81,7 +81,6 @@
   <ItemGroup>
     <Reference Include="Blish HUD">
       <HintPath>..\Blish-HUD\Blish HUD\bin\x64\Debug\net472\Blish HUD.exe</HintPath>
-      <Private>False</Private>
     </Reference>
     <Reference Include="Flurl, Version=2.8.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\Flurl.2.8.2\lib\net40\Flurl.dll</HintPath>

@@ -80,8 +80,7 @@ namespace KillProofModule
 
         protected override void DefineSettings(SettingCollection settings)
         {
-            _killProofQuickMenuEnabled = settings.DefineSetting("KillProofQuickMenuEnabled", false,
-                SmartPingMenuSettingDisplayName, SmartPingMenuSettingDescription);
+            _killProofQuickMenuEnabled = settings.DefineSetting("KillProofQuickMenuEnabled", false);
         }
 
         #region Localization
@@ -615,7 +614,7 @@ namespace KillProofModule
                 {
                     Parent = selfButtonPanel,
                     Player = new CommonFields.Player(StartedBlishHUDWhileGw2AlreadyRunning,RefreshMapToSeeYourProfile, 0, 0, true),
-                    Icon = GameService.Content.GetTexture("733268"),
+                    Icon = GameService.Content.GetTexture("common/733268"),
                     IsNew = false,
                     Location = new Point(0, 0),
                     Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
@@ -1301,6 +1300,10 @@ namespace KillProofModule
                 sendButton.Size = new Point(22, 22);
                 sendButton.Location = new Point(rightBracket.Right + 3, 2);
             };
+            var cooldownSend = DateTimeOffset.Now;
+            var hotButtonTimeSend = DateTimeOffset.Now;
+            var reduction = -1;
+            var currentValue = 0;
             sendButton.LeftMouseButtonReleased += delegate
             {
                 sendButton.Size = new Point(24, 24);
@@ -1312,6 +1315,11 @@ namespace KillProofModule
 
                 if (randomizeButton.BackgroundColor == Color.LightGreen)
                 {
+                    var cooldown = DateTimeOffset.Now.Subtract(cooldownSend);
+                    if (cooldown.TotalSeconds < 2) {
+                        ScreenNotification.ShowNotification("Your total has been reached. Cooling down.", ScreenNotification.NotificationType.Error);
+                        return;
+                    }
                     var wing = _resources.GetWing(randomizeButton.Text);
                     var wingTokens = wing.GetTokens();
                     var tokenSelection = _myKillProof.GetAllTokens().Where(x => wingTokens.Any(y => y.Id.Equals(x.Id))).ToList();
@@ -1319,23 +1327,80 @@ namespace KillProofModule
                     var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
                     chatLink.ItemId = singleRandomToken.Id;
                     var amount = _myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0;
-                    var rest = amount % 250;
-                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0
-                        ? RandomUtil.GetRandom(0, 10) > 7 ? rest : 250
-                        : amount);
+                    if (amount <= 250) {
+                        chatLink.Quantity = Convert.ToByte(amount);
+                        GameService.GameIntegration.Chat.Send(chatLink.ToString());
+                        return;
+                    }
+
+                    var reductionTimes = amount / 250 - 1;
+                    cooldown = DateTimeOffset.Now.Subtract(hotButtonTimeSend);
+
+                    if (cooldown.TotalMilliseconds > 500) 
+                    {
+                        reduction = -1;
+                        currentValue = 0;
+                    }
+
+                    if (reduction < reductionTimes)
+                    {
+                        reduction++;
+                        amount = 250 - reduction;
+                        chatLink.Quantity = Convert.ToByte(amount);
+                        currentValue += amount;
+
+                    } else {
+
+                        chatLink.Quantity = Convert.ToByte(amount % currentValue);
+                        reduction = -1;
+                        currentValue = 0;
+                        cooldownSend = DateTimeOffset.Now;
+                    }
                     GameService.GameIntegration.Chat.Send(chatLink.ToString());
+                    hotButtonTimeSend = DateTimeOffset.Now;
                 }
                 else
                 {
+                    var cooldown = DateTimeOffset.Now.Subtract(cooldownSend);
+                    if (cooldown.TotalSeconds < 2) {
+                        ScreenNotification.ShowNotification("Your total has been reached. Cooling down.", ScreenNotification.NotificationType.Error);
+                        return;
+                    }
                     var token = _myKillProof.GetToken(dropdown.SelectedItem);
                     if (token == null) return;
                     chatLink.ItemId = token.Id;
                     var amount = token.Amount;
-                    var rest = amount % 250;
-                    chatLink.Quantity = Convert.ToByte(amount > 250 && rest != 0
-                        ? RandomUtil.GetRandom(0, 10) > 7 ? rest : 250
-                        : amount);
+                    if (amount <= 250) {
+                        chatLink.Quantity = Convert.ToByte(amount);
+                        GameService.GameIntegration.Chat.Send(chatLink.ToString());
+                        return;
+                    }
+
+                    var reductionTimes = amount / 250 - 1;
+                    cooldown = DateTimeOffset.Now.Subtract(hotButtonTimeSend);
+
+                    if (cooldown.TotalMilliseconds > 500) 
+                    {
+                        reduction = -1;
+                        currentValue = 0;
+                    }
+
+                    if (reduction < reductionTimes)
+                    {
+                        reduction++;
+                        amount = 250 - reduction;
+                        chatLink.Quantity = Convert.ToByte(amount);
+                        currentValue += amount;
+
+                    } else {
+
+                        chatLink.Quantity = Convert.ToByte(amount % currentValue);
+                        reduction = -1;
+                        currentValue = 0;
+                        cooldownSend = DateTimeOffset.Now;
+                    }
                     GameService.GameIntegration.Chat.Send(chatLink.ToString());
+                    hotButtonTimeSend = DateTimeOffset.Now;
                 }
             };
             sendButton.RightMouseButtonPressed += delegate
