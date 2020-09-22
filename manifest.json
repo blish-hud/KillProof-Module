@@ -1,6 +1,6 @@
 {
   "name": "KillProof Module",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "namespace": "KillProofModule",
   "package": "KillProof Module.dll",
   "manifest_version": 1,
