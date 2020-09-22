@@ -80,7 +80,8 @@ namespace KillProofModule
 
         protected override void DefineSettings(SettingCollection settings)
         {
-            _killProofQuickMenuEnabled = settings.DefineSetting("KillProofQuickMenuEnabled", false);
+            var selfManagedSettings = settings.AddSubCollection("Managed Settings", false, false);
+            _killProofQuickMenuEnabled = selfManagedSettings.DefineSetting("KillProofQuickMenuEnabled", false);
         }
 
         #region Localization
