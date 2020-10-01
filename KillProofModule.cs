@@ -516,6 +516,7 @@ namespace KillProofModule
         {
             if (player.Self && _localPlayerButton != null)
             {
+                _localPlayerButton.BasicTooltipText = "";
                 _localPlayerButton.Player = player;
                 _localPlayerButton.Icon = GetEliteRender(player);
                 _localPlayerButton.LeftMouseButtonPressed += delegate
@@ -620,7 +621,8 @@ namespace KillProofModule
                     Location = new Point(0, 0),
                     Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
                         ContentService.FontSize.Size16,
-                        ContentService.FontStyle.Regular)
+                        ContentService.FontStyle.Regular),
+                    BasicTooltipText = RefreshMapToSeeYourProfile
                 };
             }
 
@@ -633,7 +635,7 @@ namespace KillProofModule
             var labAccountName = new Label
             {
                 Parent = header,
-                Size = new Point(200, 30),
+                Size = new Point(300, 30),
                 Location = new Point(header.Width / 2 - 100, header.Height / 2 + 30 + TOP_MARGIN),
                 StrokeText = true,
                 ShowShadow = true,
@@ -1303,7 +1305,7 @@ namespace KillProofModule
             };
             var cooldownSend = DateTimeOffset.Now;
             var hotButtonTimeSend = DateTimeOffset.Now;
-            var reduction = -1;
+            var reduction = 0;
             var currentValue = 0;
             sendButton.LeftMouseButtonReleased += delegate
             {
@@ -1327,33 +1329,37 @@ namespace KillProofModule
                     if (tokenSelection.Count == 0) return;
                     var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
                     chatLink.ItemId = singleRandomToken.Id;
-                    var amount = _myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0;
-                    if (amount <= 250) {
-                        chatLink.Quantity = Convert.ToByte(amount);
+                    var totalAmount = _myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0;
+                    if (totalAmount <= 250) {
+                        chatLink.Quantity = Convert.ToByte(totalAmount);
                         GameService.GameIntegration.Chat.Send(chatLink.ToString());
                         return;
                     }
 
-                    var reductionTimes = amount / 250 - 1;
+                    var reductionTimes = totalAmount / 250;
                     cooldown = DateTimeOffset.Now.Subtract(hotButtonTimeSend);
 
                     if (cooldown.TotalMilliseconds > 500) 
                     {
-                        reduction = -1;
+                        reduction = 0;
                         currentValue = 0;
                     }
 
                     if (reduction < reductionTimes)
                     {
-                        reduction++;
-                        amount = 250 - reduction;
-                        chatLink.Quantity = Convert.ToByte(amount);
-                        currentValue += amount;
+
+                        var tempAmount = 250 - reduction;
+                        if (RandomUtil.GetRandom(0, 10) > 4) 
+                        {
+                            currentValue += tempAmount;
+                            reduction++;
+                        }
+                        chatLink.Quantity = Convert.ToByte(tempAmount);
 
                     } else {
 
-                        chatLink.Quantity = Convert.ToByte(amount % currentValue);
-                        reduction = -1;
+                        chatLink.Quantity = Convert.ToByte(totalAmount % currentValue);
+                        reduction = 0;
                         currentValue = 0;
                         cooldownSend = DateTimeOffset.Now;
                     }
@@ -1370,33 +1376,36 @@ namespace KillProofModule
                     var token = _myKillProof.GetToken(dropdown.SelectedItem);
                     if (token == null) return;
                     chatLink.ItemId = token.Id;
-                    var amount = token.Amount;
-                    if (amount <= 250) {
-                        chatLink.Quantity = Convert.ToByte(amount);
+                    var totalAmount = token.Amount;
+                    if (totalAmount <= 250) {
+                        chatLink.Quantity = Convert.ToByte(totalAmount);
                         GameService.GameIntegration.Chat.Send(chatLink.ToString());
                         return;
                     }
 
-                    var reductionTimes = amount / 250 - 1;
+                    var reductionTimes = totalAmount / 250;
                     cooldown = DateTimeOffset.Now.Subtract(hotButtonTimeSend);
 
                     if (cooldown.TotalMilliseconds > 500) 
                     {
-                        reduction = -1;
+                        reduction = 0;
                         currentValue = 0;
                     }
 
                     if (reduction < reductionTimes)
                     {
-                        reduction++;
-                        amount = 250 - reduction;
-                        chatLink.Quantity = Convert.ToByte(amount);
-                        currentValue += amount;
+                        var tempAmount = 250 - reduction;
+                        if (RandomUtil.GetRandom(0, 10) > 4) 
+                        {
+                            currentValue += tempAmount;
+                            reduction++;
+                        }
+                        chatLink.Quantity = Convert.ToByte(tempAmount);
 
                     } else {
 
-                        chatLink.Quantity = Convert.ToByte(amount % currentValue);
-                        reduction = -1;
+                        chatLink.Quantity = Convert.ToByte(totalAmount % currentValue);
+                        reduction = 0;
                         currentValue = 0;
                         cooldownSend = DateTimeOffset.Now;
                     }

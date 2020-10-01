@@ -1,6 +1,7 @@
 ﻿using Blish_HUD;
 using Blish_HUD.ArcDps.Common;
 using Blish_HUD.Controls;
+using Blish_HUD.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;

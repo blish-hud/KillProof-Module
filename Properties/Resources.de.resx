@@ -138,7 +138,9 @@
     <comment>Toggle checkbox</comment>
   </data>
   <data name="Shows a menu on the top left corner of your screen which allows you to quickly access and ping your killproofs." xml:space="preserve">
-    <value>Zeigt ein Menü in der oberen linken Ecke deines Bildschirms an welches dir erlaubt schnell auf deine KillProofs zuzugreifen und sie anderen mitzuteilen.</value>
+    <value>Zeigt ein Menü in der oberen linken Ecke deines Bildschirms an welches
+dir erlaubt schnell auf deine KillProofs zuzugreifen und sie anderen mitzuteilen.
+Wird erst nach einem Kartenwechsel geladen.</value>
     <comment>Smart Ping Menu: Checkbox description.</comment>
   </data>
   <data name="You started Blish HUD while Guild Wars 2 was already running." xml:space="preserve">
