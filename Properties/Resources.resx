@@ -138,7 +138,9 @@
     <comment>Toggle checkbox</comment>
   </data>
   <data name="Shows a menu on the top left corner of your screen which allows you to quickly access and ping your killproofs." xml:space="preserve">
-    <value>Shows a menu on the top left corner of your screen which allows you to quickly access and ping your killproofs.</value>
+    <value>Shows a menu on the top left corner of your screen which
+allows you to quickly access and ping your killproofs.
+Loads on map change.</value>
     <comment>Smart Ping Menu: Checkbox description.</comment>
   </data>
   <data name="You started Blish HUD while Guild Wars 2 was already running." xml:space="preserve">
@@ -164,7 +166,7 @@
     <value>Update available! Visit killproof.me/addons</value>
   </data>
   <data name="ID:" xml:space="preserve">
-    <value>ID: </value>
+    <value>ID:</value>
     <comment>Identification short.</comment>
   </data>
   <data name="Not yet registered :(" xml:space="preserve">
@@ -186,7 +188,7 @@
   </data>
   <data name="Total: {0} of {1} (killproof.me/{2})" xml:space="preserve">
     <value>Total: {0} of {1} (killproof.me/{2})</value>
-    <comment>Smart Ping Menu: Chat message on right click send. Ex. "Total 250 of Legendary Insight (profile link)"</comment>
+    <comment>Smart Ping Menu: Chat message on right click send. Ex. &quot;Total 250 of Legendary Insight (profile link)&quot;</comment>
   </data>
   <data name="Everything" xml:space="preserve">
     <value>Everything</value>
@@ -212,12 +214,12 @@
     <value>profile available</value>
   </data>
   <data name="No profile for &quot;{0}&quot; found :(" xml:space="preserve">
-    <value>No profile for "{0}" found :(</value>
+    <value>No profile for &quot;{0}&quot; found :(</value>
     <comment>{0} will be swapped with account name.</comment>
   </data>
-  <data name="Send To Chat\nLeft-Click: Only send code up to a stack's worth (250x). \nRight-Click: Send killproof.me total amount." xml:space="preserve">
+  <data name="Send To Chat\nLeft-Click: Only send code up to a stack&apos;s worth (250x). \nRight-Click: Send killproof.me total amount." xml:space="preserve">
     <value>Send To Chat
-Left-Click: Only send code up to a stack's worth (250x).
+Left-Click: Only send code up to a stack&apos;s worth (250x).
 Right-Click: Send killproof.me total amount.</value>
     <comment>Smart Ping Menu: Send Button tooltip.</comment>
   </data>
