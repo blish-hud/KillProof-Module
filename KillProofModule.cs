@@ -85,6 +85,8 @@ namespace KillProofModule
         }
 
         #region Localization
+        private string KillProofTabName = "KillProof";
+
         private string SORTBY_ALL;
         private string SORTBY_KILLPROOF;
         private string SORTBY_TOKEN;
@@ -92,8 +94,7 @@ namespace KillProofModule
         private string SORTBY_RAID;
         private string SORTBY_FRACTAL;
         //private string SmartPingMenuSettingDisplayName;
-        //private string SmartPingMenuSettingDescription;
-        private string KillProofTabName;
+        //private string SmartPingMenuSettingDescription
         private string NewVersionFound;
         private string NotificationProfileAvailable;
         private string SmartPingMenuToggleCheckboxText;
@@ -117,6 +118,7 @@ namespace KillProofModule
         private string SmartPingMenuRightclickSendMessage;
         private string ClearButtonText;
         private string ClearButtonTooltipText;
+
         private void ChangeLocalization(object sender, EventArgs e)
         {
             //SmartPingMenuSettingDisplayName = Properties.Resources.Kill_Proof_Smart_Ping_Menu;
@@ -165,7 +167,7 @@ namespace KillProofModule
             if (_killProofTab != null)
                 GameService.Overlay.BlishHudWindow.RemoveTab(_killProofTab);
 
-            _killProofTab = GameService.Overlay.BlishHudWindow.AddTab("KillProof", _killProofIconTexture, _modulePanel, 0);
+            _killProofTab = GameService.Overlay.BlishHudWindow.AddTab(KillProofTabName, _killProofIconTexture, _modulePanel, 0);
         }
         #endregion
 
