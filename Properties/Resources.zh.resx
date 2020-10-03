@@ -125,10 +125,6 @@
     <value>快速发送击杀证明</value>
     <comment>Smart Ping Menu: Setting description</comment>
   </data>
-  <data name="KillProof" xml:space="preserve">
-    <value>KillProof</value>
-    <comment>Tab name</comment>
-  </data>
   <data name="A new version of the KillProof module was found:" xml:space="preserve">
     <value>检测到一个新的KillProof插件版本</value>
     <comment>New version found</comment>
@@ -226,5 +222,17 @@
 左键：开启
 右键：显示Wing</value>
     <comment>Smart Ping Menu: Randomize Button tooltip.</comment>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>明确</value>
+    <comment>Button text to delete all profiles not in squad.</comment>
+  </data>
+  <data name="Removes profiles of players which are not in squad." xml:space="preserve">
+    <value>删除不在队中的球员资料。</value>
+    <comment>Tooltip text of the clear button when hovering with mouse cursor.</comment>
+  </data>
+  <data name="Progress Proofs" xml:space="preserve">
+    <value>进度证明</value>
+    <comment>Tooltip for a sort button (Legendary Insight, Unstable Cosmic Essence)</comment>
   </data>
 </root>
