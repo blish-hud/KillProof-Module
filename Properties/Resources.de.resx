@@ -125,10 +125,6 @@
     <value>Schneller Zugriff auf deine Tötungsbeweise.</value>
     <comment>Smart Ping Menu: Setting description</comment>
   </data>
-  <data name="KillProof" xml:space="preserve">
-    <value>KillProof</value>
-    <comment>Tab name</comment>
-  </data>
   <data name="A new version of the KillProof module was found:" xml:space="preserve">
     <value>Eine neue Version des KillProof-Moduls wurde gefunden:</value>
     <comment>New version found</comment>
@@ -207,8 +203,7 @@ Wird erst nach einem Kartenwechsel geladen.</value>
     <comment>Sorting</comment>
   </data>
   <data name="Fractal Titles" xml:space="preserve">
-    <value>Fraktal-Titel
-</value>
+    <value>Fraktal-Titel</value>
     <comment>Sorting</comment>
   </data>
   <data name="profile available" xml:space="preserve">
@@ -229,5 +224,18 @@ Rechtsklick: Sende den Gesamtbetrag von killproof.me.</value>
 Linksklick: Umschalten
 Rechtsklick: Flügel iterieren</value>
     <comment>Smart Ping Menu: Randomize Button tooltip.</comment>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>Bereinigen</value>
+    <comment>Button text to delete all profiles not in squad.</comment>
+  </data>
+  <data name="Removes profiles of players which are not in squad." xml:space="preserve">
+    <value>Entfernt Profile von Spielern, die sich nicht im Trupp befinden.</value>
+    <comment>Tooltip text of the clear button when hovering with mouse cursor.</comment>
+  </data>
+  <data name="Progress Proofs" xml:space="preserve">
+    <value>Fortschrittsnachweise</value>
+    <comment>Tooltip for a sort button (Legendary Insight, Unstable Cosmic Essence)
+Fuzzy</comment>
   </data>
 </root>

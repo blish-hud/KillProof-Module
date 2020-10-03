@@ -125,10 +125,6 @@
     <value>Quick access to ping kill proofs.</value>
     <comment>Smart Ping Menu: Setting description</comment>
   </data>
-  <data name="KillProof" xml:space="preserve">
-    <value>KillProof</value>
-    <comment>Tab name</comment>
-  </data>
   <data name="A new version of the KillProof module was found:" xml:space="preserve">
     <value>A new version of the KillProof module was found:</value>
     <comment>New version found</comment>
@@ -228,5 +224,18 @@ Right-Click: Send killproof.me total amount.</value>
 Left-Click: Toggle
 Right-Click: Iterate wings</value>
     <comment>Smart Ping Menu: Randomize Button tooltip.</comment>
+  </data>
+  <data name="Clear" xml:space="preserve">
+    <value>Clear</value>
+    <comment>Button text to delete all profiles not in squad.</comment>
+  </data>
+  <data name="Removes profiles of players which are not in squad." xml:space="preserve">
+    <value>Removes profiles of players which are not in squad.</value>
+    <comment>Tooltip text of the clear button when hovering with mouse cursor.</comment>
+  </data>
+  <data name="Progress Proofs" xml:space="preserve">
+    <value>Progress Proofs</value>
+    <comment>Tooltip for a sort button (Legendary Insight, Unstable Cosmic Essence)
+Fuzzy</comment>
   </data>
 </root>

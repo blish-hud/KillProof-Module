@@ -91,8 +91,8 @@ namespace KillProofModule
         private string SORTBY_TITLE;
         private string SORTBY_RAID;
         private string SORTBY_FRACTAL;
-        private string SmartPingMenuSettingDisplayName;
-        private string SmartPingMenuSettingDescription;
+        //private string SmartPingMenuSettingDisplayName;
+        //private string SmartPingMenuSettingDescription;
         private string KillProofTabName;
         private string NewVersionFound;
         private string NotificationProfileAvailable;
@@ -115,11 +115,12 @@ namespace KillProofModule
         private string SmartPingMenuSendButtonTooltip;
         private string SmartPingMenuRandomizeButtonTooltip;
         private string SmartPingMenuRightclickSendMessage;
+        private string ClearButtonText;
+        private string ClearButtonTooltipText;
         private void ChangeLocalization(object sender, EventArgs e)
         {
-            SmartPingMenuSettingDisplayName = Properties.Resources.Kill_Proof_Smart_Ping_Menu;
-            SmartPingMenuSettingDescription = Properties.Resources.Quick_access_to_ping_kill_proofs_;
-            KillProofTabName = Properties.Resources.KillProof;
+            //SmartPingMenuSettingDisplayName = Properties.Resources.Kill_Proof_Smart_Ping_Menu;
+            //SmartPingMenuSettingDescription = Properties.Resources.Quick_access_to_ping_kill_proofs_;
             NewVersionFound = Properties.Resources.A_new_version_of_the_KillProof_module_was_found_;
             NotificationProfileAvailable = Properties.Resources.profile_available;
             SmartPingMenuToggleCheckboxText = Properties.Resources.Show_Smart_Ping_Menu;
@@ -141,9 +142,11 @@ namespace KillProofModule
             SmartPingMenuSendButtonTooltip = Properties.Resources.Send_To_Chat_nLeft_Click__Only_send_code_up_to_a_stack_s_worth__250x____nRight_Click__Send_killproof_me_total_amount_;
             SmartPingMenuRandomizeButtonTooltip = Properties.Resources.Random_token_from_selected_wing_when_pressing_Send_To_Chat__nLeft_Click__Toggle_nRight_Click__Iterate_wings;
             SmartPingMenuRightclickSendMessage = Properties.Resources.Total___0__of__1___killproof_me__2__;
+            ClearButtonText = Properties.Resources.Clear;
+            ClearButtonTooltipText = Properties.Resources.Removes_profiles_of_players_which_are_not_in_squad_;
 
             SORTBY_ALL = Properties.Resources.Everything;
-            SORTBY_KILLPROOF = Properties.Resources.KillProof;
+            SORTBY_KILLPROOF = Properties.Resources.Progress_Proofs;
             SORTBY_TOKEN = Properties.Resources.Tokens;
             SORTBY_TITLE = Properties.Resources.Titles;
             SORTBY_RAID = Properties.Resources.Raid_Titles;
@@ -311,24 +314,6 @@ namespace KillProofModule
         #endregion
 
         #region Module Logic
-
-        private async Task<bool> IsLatestVersion()
-        {
-            var (responseSuccess, remoteManifest) =
-                await GetJsonResponse<Manifest>(
-                    "https://raw.githubusercontent.com/blish-hud/KillProof-Module/master/manifest.json");
-            if (responseSuccess)
-            {
-                if (ModuleInstance.Version >= remoteManifest.Version)
-                    return true;
-                Logger.Warn(NewVersionFound + ' ' + remoteManifest.Version.Clean());
-            }
-            else
-            {
-                Logger.Info("Failed to check for new version.");
-            }
-            return false;
-        }
 
         #region Render Getters
 
@@ -539,7 +524,7 @@ namespace KillProofModule
 
             if (optionalButton == null)
             {
-                if (_displayedPlayers.Count() == MAX_PLAYERS) _displayedPlayers.Dequeue().Dispose();
+                if (_displayedPlayers.Count() == MAX_PLAYERS) _displayedPlayers.Dequeue()?.Dispose();
 
                 var playerButton = new PlayerButton
                 {
@@ -689,21 +674,7 @@ namespace KillProofModule
                 ShowShadow = true,
                 Text = PoweredByText
             };
-            var checkUpdate = Task.Run(() => IsLatestVersion());
-            checkUpdate.Wait();
-            var versionLabel = new Label
-            {
-                Parent = footer,
-                Size = footer.Size,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                VerticalAlignment = VerticalAlignment.Bottom,
-                StrokeText = true,
-                ShowShadow = true,
-                Text = checkUpdate.Result
-                    ? ModuleInstance.Version.Clean()
-                    : UpdateAvailableVisitText,
-                TextColor = checkUpdate.Result ? Color.White : Color.Red
-            };
+
             /* ###################
             /      </FOOTER>
             / ################### */
@@ -716,6 +687,26 @@ namespace KillProofModule
                 CanScroll = true,
                 ShowTint = true
             };
+
+            if (GameService.ArcDps.Loaded)
+            {
+                var clearButton = new StandardButton()
+                {
+                    Parent = hPanel,
+                    Size = new Point(100, 30),
+                    Location = new Point(_squadPanel.Location.X + _squadPanel.Width - 100 - RIGHT_MARGIN, _squadPanel.Location.Y + _squadPanel.Height + BOTTOM_MARGIN),
+                    Text = ClearButtonText,
+                    BasicTooltipText = ClearButtonTooltipText
+                };
+                clearButton.Click += delegate
+                {
+                    foreach (var c in _displayedPlayers.Where(c => c != null)
+                        .Where(c 
+                            => !GameService.ArcDps.Common.PlayersInSquad.Any(p 
+                                => p.Value.AccountName.Equals(c.Player.AccountName))))
+                        c.Dispose();
+                };
+            }
 
             return hPanel;
         }
@@ -732,8 +723,7 @@ namespace KillProofModule
             bSortMethod.Size = new Point(32, 32);
         }
 
-        private void FinishLoadingKillProofPanel(WindowBase wndw, Panel hPanel, CommonFields.Player player,
-            KillProof currentAccount)
+        private void FinishLoadingKillProofPanel(WindowBase wndw, Panel hPanel, CommonFields.Player player, KillProof currentAccount)
         {
             if (currentAccount != null)
             {
@@ -990,7 +980,7 @@ namespace KillProofModule
                     {
                         Parent = _squadPanel,
                         Player = newPlayer,
-                        Icon = GameService.Content.GetTexture("733268"),
+                        Icon = GameService.Content.GetTexture("common/733268"),
                         Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
                             ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                         IsNew = false
@@ -1156,11 +1146,14 @@ namespace KillProofModule
                 select player;
 
             var pos = 0;
-            foreach (var e in sorted)
+            foreach (var e in sorted.Where(x => x != null))
             {
                 var x = pos % 3;
                 var y = pos / 3;
                 e.Location = new Point(x * (e.Width + 8), y * (e.Height + 8));
+
+                if (e.Parent == null) 
+                    e.Parent = _squadPanel;
 
                 ((Panel) e.Parent).VerticalScrollOffset = 0;
                 e.Parent.Invalidate();

@@ -23,8 +23,8 @@ namespace KillProofModule.Persistance
     internal class Resources
     {
         [JsonProperty("general_tokens")] public IList<Token> GeneralTokens { get; set; }
-        [JsonProperty("raids")] public IList<Raid> Raids { get; set; }
-        [JsonProperty("fractals")] public IList<Fractal> Fractals { get; set; }
+        [JsonProperty("fractals")] public IReadOnlyList<Token> Fractals { get; set; }
+        [JsonProperty("raids")] public IReadOnlyList<Raid> Raids { get; set; }
 
         public Wing GetWing(int index)
         {
@@ -66,7 +66,7 @@ namespace KillProofModule.Persistance
         public IEnumerable<Token> GetAllTokens()
         {
             return GeneralTokens
-                .Concat(Fractals.Where(fractal => fractal.Token != null).Select(fractal => fractal.Token))
+                .Concat(Fractals.Where(fractal => fractal != null).Select(fractal => fractal))
                 .Concat(GetAllEvents().Where(encounter => encounter.Token != null)
                     .Select(encounter => encounter.Token));
         }
@@ -98,14 +98,14 @@ namespace KillProofModule.Persistance
     internal class Raid
     {
         [JsonProperty("id")] public string Id { get; set; }
-        [JsonProperty("wings")] public IList<Wing> Wings { get; set; }
+        [JsonProperty("wings")] public IReadOnlyList<Wing> Wings { get; set; }
     }
 
     internal class Wing
     {
         [JsonProperty("id")] public string Id { get; set; }
         [JsonProperty("map_id")] public int MapId { get; set; }
-        [JsonProperty("events")] public IList<Event> Events { get; set; }
+        [JsonProperty("events")] public IReadOnlyList<Event> Events { get; set; }
 
         public IEnumerable<Token> GetTokens()
         {
@@ -117,7 +117,7 @@ namespace KillProofModule.Persistance
     {
         [JsonProperty("id")] public string Id { get; set; }
         [JsonProperty("name")] public string Name { get; set; }
-        [JsonProperty("miniatures")] public IList<Miniature> Miniatures { get; set; }
+        [JsonProperty("miniatures")] public IReadOnlyList<Miniature> Miniatures { get; set; }
         [JsonProperty("token")] public Token Token { get; set; }
         [JsonConverter(typeof(StringEnumConverter)), JsonProperty("type")] public RaidWingEventType Type { get; set; }
     }
@@ -135,11 +135,5 @@ namespace KillProofModule.Persistance
         [JsonProperty("name")] public string Name { get; set; }
         [JsonProperty("icon")] public string Icon { get; set; }
         [JsonProperty("amount")] public int Amount { get; set; }
-    }
-
-    internal class Fractal
-    {
-        [JsonProperty("id")] public int Id { get; set; }
-        [JsonProperty("token")] public Token Token { get; set; }
     }
 }

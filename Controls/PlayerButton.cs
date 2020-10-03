@@ -18,12 +18,6 @@ namespace KillProofModule.Controls
         private readonly Texture2D PIXEL;
         private readonly Texture2D SEPARATOR;
 
-        private BitmapFont _font;
-
-        private bool _isNew = true;
-
-        private CommonFields.Player _player;
-
         public PlayerButton()
         {
             BORDER_SPRITE = BORDER_SPRITE ?? Content.GetTexture(@"controls/detailsbutton/605003");
@@ -33,6 +27,7 @@ namespace KillProofModule.Controls
             Size = new Point(DEFAULT_WIDTH, DEFAULT_HEIGHT);
         }
 
+        private BitmapFont _font;
         public BitmapFont Font
         {
             get => _font;
@@ -44,6 +39,7 @@ namespace KillProofModule.Controls
             }
         }
 
+        private CommonFields.Player _player;
         public CommonFields.Player Player
         {
             get => _player;
@@ -54,6 +50,7 @@ namespace KillProofModule.Controls
             }
         }
 
+        private bool _isNew = true;
         public bool IsNew
         {
             get => _isNew;
