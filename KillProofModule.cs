@@ -284,6 +284,7 @@ namespace KillProofModule
             _squadPanel?.Dispose();
             _localPlayerButton?.Dispose();
             foreach (var c in _displayedKillProofs) c?.Dispose();
+            _displayedPlayers.Clear();
             GameService.Overlay.BlishHudWindow.RemoveTab(_killProofTab);
             // All static members must be manually unset
             ModuleInstance = null;
@@ -703,10 +704,14 @@ namespace KillProofModule
                 clearButton.Click += delegate
                 {
                     foreach (var c in _displayedPlayers.Where(c => c != null)
-                        .Where(c 
-                            => !GameService.ArcDps.Common.PlayersInSquad.Any(p 
+                        .Where(c
+                            => !GameService.ArcDps.Common.PlayersInSquad.Any(p
                                 => p.Value.AccountName.Equals(c.Player.AccountName))))
+                    {
+                        _displayedPlayers = new Queue<PlayerButton>(_displayedPlayers.Where(s => s != c));
                         c.Dispose();
+                    }
+
                 };
             }
 
@@ -969,11 +974,9 @@ namespace KillProofModule
 
                 RepositionKillProofs();
 
-                if (!player.Self && !player.AccountName.Equals(_localPlayerButton.Player.AccountName,
-                                     StringComparison.InvariantCultureIgnoreCase)
+                if (!player.Self && !player.AccountName.Equals(_localPlayerButton.Player.AccountName)
                                  && !_displayedPlayers.Any(x =>
-                                     x.Player.AccountName.Equals(player.AccountName,
-                                         StringComparison.InvariantCultureIgnoreCase)))
+                                     x.Player.AccountName.Equals(player.AccountName)))
                 {
                     if (_displayedPlayers.Count == MAX_PLAYERS) _displayedPlayers.Dequeue().Dispose();
 
@@ -1148,14 +1151,11 @@ namespace KillProofModule
                 select player;
 
             var pos = 0;
-            foreach (var e in sorted.Where(x => x != null))
+            foreach (var e in sorted)
             {
                 var x = pos % 3;
                 var y = pos / 3;
                 e.Location = new Point(x * (e.Width + 8), y * (e.Height + 8));
-
-                if (e.Parent == null) 
-                    e.Parent = _squadPanel;
 
                 ((Panel) e.Parent).VerticalScrollOffset = 0;
                 e.Parent.Invalidate();
