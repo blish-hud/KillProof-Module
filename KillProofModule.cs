@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -36,9 +35,6 @@ namespace KillProofModule
         private const int BOTTOM_MARGIN = 10;
         private const int LEFT_MARGIN = 8;
 
-        // Max profile buttons on SquadPanel before dequeuing FiFo behavior.
-        private const int MAX_PLAYERS = 15;
-
         private const string KILLPROOF_API_URL = "https://killproof.me/api/";
 
         private static readonly Logger Logger = Logger.GetLogger(typeof(KillProofModule));
@@ -49,10 +45,11 @@ namespace KillProofModule
         private KillProof _currentProfile;
         private List<KillProofButton> _displayedKillProofs;
 
-        private Queue<PlayerButton> _displayedPlayers;
+        private List<PlayerButton> _displayedPlayers;
         private Panel _killProofQuickMenu;
 
         private SettingEntry<bool> _killProofQuickMenuEnabled;
+        private SettingEntry<bool> _automaticClearEnabled;
 
         private WindowTab _killProofTab;
         private Panel _modulePanel;
@@ -82,6 +79,7 @@ namespace KillProofModule
         {
             var selfManagedSettings = settings.AddSubCollection("Managed Settings", false, false);
             _killProofQuickMenuEnabled = selfManagedSettings.DefineSetting("KillProofQuickMenuEnabled", false);
+            _automaticClearEnabled = selfManagedSettings.DefineSetting("AutomaticClearEnabled", false);
         }
 
         #region Localization
@@ -95,7 +93,6 @@ namespace KillProofModule
         private string SORTBY_FRACTAL;
         //private string SmartPingMenuSettingDisplayName;
         //private string SmartPingMenuSettingDescription
-        private string NewVersionFound;
         private string NotificationProfileAvailable;
         private string SmartPingMenuToggleCheckboxText;
         private string SmartPingMenuCheckboxTooltip;
@@ -105,7 +102,6 @@ namespace KillProofModule
         private string RecentProfileText;
         private string PoweredByText;
         private string LastRefreshText;
-        private string UpdateAvailableVisitText;
         private string KpIdText;
         private string NotYetRegisteredText;
         private string VisitUsAndHelpText;
@@ -118,12 +114,12 @@ namespace KillProofModule
         private string SmartPingMenuRightclickSendMessage;
         private string ClearButtonText;
         private string ClearButtonTooltipText;
+        private string ClearCheckboxTooltipText;
 
         private void ChangeLocalization(object sender, EventArgs e)
         {
             //SmartPingMenuSettingDisplayName = Properties.Resources.Kill_Proof_Smart_Ping_Menu;
             //SmartPingMenuSettingDescription = Properties.Resources.Quick_access_to_ping_kill_proofs_;
-            NewVersionFound = Properties.Resources.A_new_version_of_the_KillProof_module_was_found_;
             NotificationProfileAvailable = Properties.Resources.profile_available;
             SmartPingMenuToggleCheckboxText = Properties.Resources.Show_Smart_Ping_Menu;
             SmartPingMenuCheckboxTooltip = Properties.Resources.Shows_a_menu_on_the_top_left_corner_of_your_screen_which_allows_you_to_quickly_access_and_ping_your_killproofs_;
@@ -133,7 +129,6 @@ namespace KillProofModule
             RecentProfileText = Properties.Resources.Recent_profiles_;
             PoweredByText = Properties.Resources.Powered_by_www_killproof_me;
             LastRefreshText = Properties.Resources.Last_Refresh_;
-            UpdateAvailableVisitText = Properties.Resources.Update_available__Visit_killproof_me_addons;
             KpIdText = Properties.Resources.ID_;
             NotYetRegisteredText = Properties.Resources.Not_yet_registered___;
             VisitUsAndHelpText = Properties.Resources.Visit_www_killproof_me_and_allow_us_to_record_your_KillProofs_for_you_;
@@ -146,6 +141,7 @@ namespace KillProofModule
             SmartPingMenuRightclickSendMessage = Properties.Resources.Total___0__of__1___killproof_me__2__;
             ClearButtonText = Properties.Resources.Clear;
             ClearButtonTooltipText = Properties.Resources.Removes_profiles_of_players_which_are_not_in_squad_;
+            ClearCheckboxTooltipText = Properties.Resources.Remove_leavers_automatically_;
 
             SORTBY_ALL = Properties.Resources.Everything;
             SORTBY_KILLPROOF = Properties.Resources.Progress_Proofs;
@@ -193,7 +189,7 @@ namespace KillProofModule
             EliteRenderRepository = new Dictionary<int, AsyncTexture2D>();
             ProfessionRenderRepository = new Dictionary<int, AsyncTexture2D>();
             _displayedKillProofs = new List<KillProofButton>();
-            _displayedPlayers = new Queue<PlayerButton>();
+            _displayedPlayers = new List<PlayerButton>();
             _cachedKillProofs = new List<KillProof>();
 
             LoadTextures();
@@ -234,6 +230,7 @@ namespace KillProofModule
         {
             ChangeLocalization(null, null);
             GameService.ArcDps.Common.PlayerAdded += PlayerAddedEvent;
+            GameService.ArcDps.Common.PlayerRemoved += PlayerLeavesEvent;
 
             // Base handler must be called
             base.OnModuleLoaded(e);
@@ -280,6 +277,8 @@ namespace KillProofModule
         protected override void Unload()
         {
             GameService.Overlay.UserLocaleChanged -= ChangeLocalization;
+            GameService.ArcDps.Common.PlayerAdded -= PlayerAddedEvent;
+            GameService.ArcDps.Common.PlayerRemoved -= PlayerLeavesEvent;
             _killProofQuickMenu?.Dispose();
             _squadPanel?.Dispose();
             _localPlayerButton?.Dispose();
@@ -500,6 +499,13 @@ namespace KillProofModule
             return responseSuccess && optionalKillProof?.Error == null;
         }
 
+        private void PlayerLeavesEvent(CommonFields.Player player)
+        {
+            if (!_automaticClearEnabled.Value) return;
+            var profileBtn = _displayedPlayers.FirstOrDefault(x => x.Player.AccountName.Equals(player.AccountName));
+            _displayedPlayers.Remove(profileBtn);
+            profileBtn?.Dispose();
+        }
         private void PlayerAddedEvent(CommonFields.Player player)
         {
             if (player.Self && _localPlayerButton != null)
@@ -527,8 +533,6 @@ namespace KillProofModule
 
             if (optionalButton == null)
             {
-                if (_displayedPlayers.Count() == MAX_PLAYERS) _displayedPlayers.Dequeue()?.Dispose();
-
                 var playerButton = new PlayerButton
                 {
                     Parent = _squadPanel,
@@ -543,7 +547,7 @@ namespace KillProofModule
                     GameService.Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(GameService.Overlay.BlishHudWindow,
                         playerButton.Player));
                 };
-                _displayedPlayers.Enqueue(playerButton);
+                _displayedPlayers.Add(playerButton);
             }
             else
             {
@@ -571,48 +575,6 @@ namespace KillProofModule
                 Location = new Point(0, 0),
                 CanScroll = false
             };
-
-            if (GameService.ArcDps.Loaded)
-            {
-                var selfButtonPanel = new Panel
-                {
-                    Parent = header,
-                    Size = new Point(335, 114),
-                    ShowBorder = true,
-                    ShowTint = true,
-                    Location =
-                        new Point(header.Right - 335 - RIGHT_MARGIN, TOP_MARGIN + 15)
-                };
-                _smartPingCheckBox = new Checkbox
-                {
-                    Parent = header,
-                    Location = new Point(selfButtonPanel.Location.X + LEFT_MARGIN, selfButtonPanel.Bottom),
-                    Size = new Point(selfButtonPanel.Width, 30),
-                    Text = SmartPingMenuToggleCheckboxText,
-                    BasicTooltipText = SmartPingMenuCheckboxTooltip,
-                    Checked = _killProofQuickMenuEnabled.Value
-                };
-                _smartPingCheckBox.CheckedChanged += delegate(object sender, CheckChangedEvent e)
-                {
-                    _killProofQuickMenuEnabled.Value = e.Checked;
-                    if (e.Checked && _myKillProof != null)
-                        _killProofQuickMenu = BuildKillProofQuickMenu();
-                    else
-                        _killProofQuickMenu?.Dispose();
-                };
-                _localPlayerButton = new PlayerButton
-                {
-                    Parent = selfButtonPanel,
-                    Player = new CommonFields.Player(StartedBlishHUDWhileGw2AlreadyRunning,RefreshMapToSeeYourProfile, 0, 0, true),
-                    Icon = GameService.Content.GetTexture("common/733268"),
-                    IsNew = false,
-                    Location = new Point(0, 0),
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                        ContentService.FontSize.Size16,
-                        ContentService.FontStyle.Regular),
-                    BasicTooltipText = RefreshMapToSeeYourProfile
-                };
-            }
 
             var imgKillproof = new Image(_killProofMeLogoTexture)
             {
@@ -691,8 +653,55 @@ namespace KillProofModule
                 ShowTint = true
             };
 
+            // Features only available when ArcDps is installed.
             if (GameService.ArcDps.Loaded)
-            {
+            { 
+                var selfButtonPanel = new Panel
+                {
+                    Parent = header,
+                    Size = new Point(335, 114),
+                    ShowBorder = true,
+                    ShowTint = true,
+                    Location =
+                        new Point(header.Right - 335 - RIGHT_MARGIN, TOP_MARGIN + 15)
+                };
+
+
+                _smartPingCheckBox = new Checkbox
+                {
+                    Parent = header,
+                    Location = new Point(selfButtonPanel.Location.X + LEFT_MARGIN, selfButtonPanel.Bottom),
+                    Size = new Point(selfButtonPanel.Width, 30),
+                    Text = SmartPingMenuToggleCheckboxText,
+                    BasicTooltipText = SmartPingMenuCheckboxTooltip,
+                    Checked = _killProofQuickMenuEnabled.Value
+                };
+
+
+                _smartPingCheckBox.CheckedChanged += delegate(object sender, CheckChangedEvent e)
+                {
+                    _killProofQuickMenuEnabled.Value = e.Checked;
+                    if (e.Checked && _myKillProof != null)
+                        _killProofQuickMenu = BuildKillProofQuickMenu();
+                    else
+                        _killProofQuickMenu?.Dispose();
+                };
+
+
+                _localPlayerButton = new PlayerButton
+                {
+                    Parent = selfButtonPanel,
+                    Player = new CommonFields.Player(StartedBlishHUDWhileGw2AlreadyRunning,RefreshMapToSeeYourProfile, 0, 0, true),
+                    Icon = GameService.Content.GetTexture("common/733268"),
+                    IsNew = false,
+                    Location = new Point(0, 0),
+                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
+                        ContentService.FontSize.Size16,
+                        ContentService.FontStyle.Regular),
+                    BasicTooltipText = RefreshMapToSeeYourProfile
+                };
+
+
                 var clearButton = new StandardButton()
                 {
                     Parent = hPanel,
@@ -701,6 +710,24 @@ namespace KillProofModule
                     Text = ClearButtonText,
                     BasicTooltipText = ClearButtonTooltipText
                 };
+
+
+                var clearCheckbox = new Checkbox()
+                {
+                    Parent = hPanel,
+                    Size = new Point(20, 30),
+                    Location = new Point(clearButton.Location.X - 20 - RIGHT_MARGIN, clearButton.Location.Y),
+                    Text = "",
+                    BasicTooltipText = ClearCheckboxTooltipText
+                };
+
+
+                clearCheckbox.CheckedChanged += delegate(object o, CheckChangedEvent e) 
+                {
+                    _automaticClearEnabled.Value = e.Checked;
+                };
+
+
                 clearButton.Click += delegate
                 {
                     foreach (var c in _displayedPlayers.Where(c => c != null)
@@ -708,7 +735,7 @@ namespace KillProofModule
                             => !GameService.ArcDps.Common.PlayersInSquad.Any(p
                                 => p.Value.AccountName.Equals(c.Player.AccountName))))
                     {
-                        _displayedPlayers = new Queue<PlayerButton>(_displayedPlayers.Where(s => s != c));
+                        _displayedPlayers.Remove(c);
                         c.Dispose();
                     }
 
@@ -978,8 +1005,6 @@ namespace KillProofModule
                                  && !_displayedPlayers.Any(x =>
                                      x.Player.AccountName.Equals(player.AccountName)))
                 {
-                    if (_displayedPlayers.Count == MAX_PLAYERS) _displayedPlayers.Dequeue().Dispose();
-
                     var newPlayer = new CommonFields.Player(null, player.AccountName, 0, 0, false);
                     var playerButton = new PlayerButton
                     {
@@ -995,7 +1020,7 @@ namespace KillProofModule
                         GameService.Overlay.BlishHudWindow.Navigate(
                             BuildKillProofPanel(GameService.Overlay.BlishHudWindow, player));
                     };
-                    _displayedPlayers.Enqueue(playerButton);
+                    _displayedPlayers.Add(playerButton);
                 }
             }
             else

@@ -125,10 +125,6 @@
     <value>快速发送击杀证明</value>
     <comment>Smart Ping Menu: Setting description</comment>
   </data>
-  <data name="A new version of the KillProof module was found:" xml:space="preserve">
-    <value>检测到一个新的KillProof插件版本</value>
-    <comment>New version found</comment>
-  </data>
   <data name="Show Smart Ping Menu" xml:space="preserve">
     <value>显示智能标记菜单</value>
     <comment>Toggle checkbox</comment>
@@ -155,9 +151,6 @@
   </data>
   <data name="Last Refresh:" xml:space="preserve">
     <value>最后一次更新：</value>
-  </data>
-  <data name="Update available! Visit killproof.me/addons" xml:space="preserve">
-    <value>有新的更新！请前往KillProof.me/addons查看</value>
   </data>
   <data name="ID:" xml:space="preserve">
     <value>ID:</value>
@@ -234,5 +227,13 @@
   <data name="Progress Proofs" xml:space="preserve">
     <value>进度证明</value>
     <comment>Tooltip for a sort button (Legendary Insight, Unstable Cosmic Essence)</comment>
+  </data>
+  <data name="New" xml:space="preserve">
+    <value>新</value>
+    <comment>The marker for a new profile that is available.</comment>
+  </data>
+  <data name="Remove leavers automatically." xml:space="preserve">
+    <value>自动删除离开者的资料。</value>
+    <comment>Tooltip for the checkbox that toggles automatic clearing.</comment>
   </data>
 </root>

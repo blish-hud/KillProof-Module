@@ -125,10 +125,6 @@
     <value>Schneller Zugriff auf deine Tötungsbeweise.</value>
     <comment>Smart Ping Menu: Setting description</comment>
   </data>
-  <data name="A new version of the KillProof module was found:" xml:space="preserve">
-    <value>Eine neue Version des KillProof-Moduls wurde gefunden:</value>
-    <comment>New version found</comment>
-  </data>
   <data name="Show Smart Ping Menu" xml:space="preserve">
     <value>Schnellpingmenü anzeigen</value>
     <comment>Toggle checkbox</comment>
@@ -157,9 +153,6 @@ Wird erst nach einem Kartenwechsel geladen.</value>
   </data>
   <data name="Last Refresh:" xml:space="preserve">
     <value>Letzte Aktualisierung:</value>
-  </data>
-  <data name="Update available! Visit killproof.me/addons" xml:space="preserve">
-    <value>Update verfügbar! Besuche killproof.me/addons</value>
   </data>
   <data name="ID:" xml:space="preserve">
     <value>ID:</value>
@@ -237,5 +230,13 @@ Rechtsklick: Flügel iterieren</value>
     <value>Fortschrittsnachweise</value>
     <comment>Tooltip for a sort button (Legendary Insight, Unstable Cosmic Essence)
 Fuzzy</comment>
+  </data>
+  <data name="New" xml:space="preserve">
+    <value>Neu</value>
+    <comment>The marker for a new profile that is available.</comment>
+  </data>
+  <data name="Remove leavers automatically." xml:space="preserve">
+    <value>Entferne Profile von Spielern automatisch, wenn sie den Trupp verlassen.</value>
+    <comment>Tooltip for the checkbox that toggles automatic clearing.</comment>
   </data>
 </root>

@@ -61,15 +61,6 @@ namespace KillProofModule.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to A new version of the KillProof module was found:.
-        /// </summary>
-        internal static string A_new_version_of_the_KillProof_module_was_found_ {
-            get {
-                return ResourceManager.GetString("A new version of the KillProof module was found:", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Account Name or KillProof.me-ID:.
         /// </summary>
         internal static string Account_Name_or_KillProof_me_ID_ {
@@ -138,6 +129,15 @@ namespace KillProofModule.Properties {
         internal static string Loading___ {
             get {
                 return ResourceManager.GetString("Loading ..", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to New.
+        /// </summary>
+        internal static string New {
+            get {
+                return ResourceManager.GetString("New", resourceCulture);
             }
         }
         
@@ -253,6 +253,15 @@ namespace KillProofModule.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Remove profiles of leavers automatically..
+        /// </summary>
+        internal static string Remove_leavers_automatically_ {
+            get {
+                return ResourceManager.GetString("Remove leavers automatically.", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Removes profiles of players which are not in squad..
         /// </summary>
         internal static string Removes_profiles_of_players_which_are_not_in_squad_ {
@@ -318,15 +327,6 @@ namespace KillProofModule.Properties {
         internal static string Total___0__of__1___killproof_me__2__ {
             get {
                 return ResourceManager.GetString("Total: {0} of {1} (killproof.me/{2})", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Update available! Visit killproof.me/addons.
-        /// </summary>
-        internal static string Update_available__Visit_killproof_me_addons {
-            get {
-                return ResourceManager.GetString("Update available! Visit killproof.me/addons", resourceCulture);
             }
         }
         
