@@ -107,7 +107,7 @@ namespace KillProofModule.Controls
             }
 
             if (IsNew)
-                spriteBatch.DrawStringOnCtrl(this, "New", Content.DefaultFont14,
+                spriteBatch.DrawStringOnCtrl(this, Properties.Resources.New, Content.DefaultFont14,
                     new Rectangle(iconSize + 18, 2, DEFAULT_WIDTH - iconSize - 20,
                         Height - DEFAULT_BOTTOMSECTION_HEIGHT), Color.Gold, false, true, 2, HorizontalAlignment.Right,
                     VerticalAlignment.Top);
