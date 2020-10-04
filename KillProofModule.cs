@@ -718,7 +718,8 @@ namespace KillProofModule
                     Size = new Point(20, 30),
                     Location = new Point(clearButton.Location.X - 20 - RIGHT_MARGIN, clearButton.Location.Y),
                     Text = "",
-                    BasicTooltipText = ClearCheckboxTooltipText
+                    BasicTooltipText = ClearCheckboxTooltipText,
+                    Checked = _automaticClearEnabled.Value
                 };
 
 
