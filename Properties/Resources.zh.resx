@@ -217,11 +217,11 @@
     <comment>Smart Ping Menu: Randomize Button tooltip.</comment>
   </data>
   <data name="Clear" xml:space="preserve">
-    <value>明确</value>
+    <value>清除</value>
     <comment>Button text to delete all profiles not in squad.</comment>
   </data>
   <data name="Removes profiles of players which are not in squad." xml:space="preserve">
-    <value>删除不在队中的球员资料。</value>
+    <value>清除不在小队内人员的资料</value>
     <comment>Tooltip text of the clear button when hovering with mouse cursor.</comment>
   </data>
   <data name="Progress Proofs" xml:space="preserve">
@@ -233,7 +233,7 @@
     <comment>The marker for a new profile that is available.</comment>
   </data>
   <data name="Remove leavers automatically." xml:space="preserve">
-    <value>自动删除离开者的资料。</value>
+    <value>自动移除离开小队人员的资料。</value>
     <comment>Tooltip for the checkbox that toggles automatic clearing.</comment>
   </data>
 </root>
