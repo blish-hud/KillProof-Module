@@ -41,10 +41,6 @@ namespace KillProofModule
 
         internal static KillProofModule ModuleInstance;
 
-        private List<KillProof> _cachedKillProofs;
-        private KillProof _currentProfile;
-        private List<KillProofButton> _displayedKillProofs;
-
         private List<PlayerButton> _displayedPlayers;
         private Panel _killProofQuickMenu;
 
@@ -61,13 +57,17 @@ namespace KillProofModule
 
         private Panel _squadPanel;
         private string CurrentSortMethod;
-        private Dictionary<int, AsyncTexture2D> EliteRenderRepository;
         private readonly Point LABEL_BIG = new Point(400, 40);
         private readonly Point LABEL_SMALL = new Point(400, 30);
-        private Dictionary<int, AsyncTexture2D> ProfessionRenderRepository;
 
         // Caches
+        private Dictionary<int, AsyncTexture2D> ProfessionRenderRepository;
+        private Dictionary<int, AsyncTexture2D> EliteRenderRepository;
         private Dictionary<int, AsyncTexture2D> TokenRenderRepository;
+
+        private List<KillProof> _cachedKillProofs;
+        private KillProof _currentProfile;
+        private List<KillProofButton> _displayedKillProofs;
 
         [ImportingConstructor]
         public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters)
@@ -325,6 +325,7 @@ namespace KillProofModule
             foreach (var token in tokenRenderUrlRepository)
             {
                 TokenRenderRepository.Add(token.Id, new AsyncTexture2D());
+
                 var renderUri = token.Icon;
                 try
                 {
@@ -345,44 +346,41 @@ namespace KillProofModule
                 }
             }
         }
-
         private async Task<IReadOnlyList<Profession>> LoadProfessions()
         {
             return await Gw2ApiManager.Gw2ApiClient.V2.Professions.ManyAsync(Enum.GetValues(typeof(ProfessionType))
                 .Cast<ProfessionType>());
         }
-
         private async Task LoadProfessionIcons()
         {
             var professions = await LoadProfessions();
             foreach (var profession in professions)
             {
-                var renderUri = (string) profession.IconBig;
                 var id = (int) Enum.GetValues(typeof(ProfessionType)).Cast<ProfessionType>().ToList()
                     .Find(x => x.ToString().Equals(profession.Id, StringComparison.InvariantCultureIgnoreCase));
-                if (ProfessionRenderRepository.Any(x => x.Key == id))
-                    try
-                    {
-                        var textureDataResponse =
-                            await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
 
-                        using (var textureStream = new MemoryStream(textureDataResponse))
-                        {
-                            var loadedTexture =
-                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
+                ProfessionRenderRepository.Add(id, new AsyncTexture2D());
 
-                            ProfessionRenderRepository[id].SwapTexture(loadedTexture);
-                        }
-                    }
-                    catch (Exception ex)
+                var renderUri = (string) profession.IconBig;
+                try
+                {
+                    var textureDataResponse =
+                        await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
+
+                    using (var textureStream = new MemoryStream(textureDataResponse))
                     {
-                        Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                        var loadedTexture =
+                            Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
+
+                        ProfessionRenderRepository[id].SwapTexture(loadedTexture);
                     }
-                else
-                    ProfessionRenderRepository.Add(id, GameService.Content.GetRenderServiceTexture(renderUri));
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                }
             }
         }
-
         private async Task LoadEliteIcons()
         {
             var ids = await Gw2ApiManager.Gw2ApiClient.V2.Specializations.IdsAsync();
@@ -390,66 +388,40 @@ namespace KillProofModule
             foreach (var specialization in specializations)
             {
                 if (!specialization.Elite) continue;
-                if (EliteRenderRepository.Any(x => x.Key == specialization.Id))
+
+                EliteRenderRepository.Add(specialization.Id, new AsyncTexture2D());
+
+                var renderUri = (string) specialization.ProfessionIconBig;
+                try
                 {
-                    var renderUri = (string) specialization.ProfessionIconBig;
-                    try
-                    {
-                        var textureDataResponse =
-                            await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
+                    var textureDataResponse =
+                        await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
 
-                        using (var textureStream = new MemoryStream(textureDataResponse))
-                        {
-                            var loadedTexture =
-                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice,
-                                    textureStream);
-
-                            EliteRenderRepository[specialization.Id].SwapTexture(loadedTexture);
-                        }
-                    }
-                    catch (Exception ex)
+                    using (var textureStream = new MemoryStream(textureDataResponse))
                     {
-                        Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                        var loadedTexture =
+                            Texture2D.FromStream(GameService.Graphics.GraphicsDevice,
+                                textureStream);
+
+                        EliteRenderRepository[specialization.Id].SwapTexture(loadedTexture);
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    EliteRenderRepository.Add(specialization.Id,
-                        GameService.Content.GetRenderServiceTexture(specialization.ProfessionIconBig));
+                    Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
                 }
             }
         }
 
         private AsyncTexture2D GetProfessionRender(CommonFields.Player player)
         {
-            if (!ProfessionRenderRepository.Any(x => x.Key.Equals((int) player.Profession)))
-            {
-                var render = new AsyncTexture2D();
-                ProfessionRenderRepository.Add((int) player.Profession, render);
-            }
-
             return ProfessionRenderRepository[(int) player.Profession];
         }
-
         private AsyncTexture2D GetEliteRender(CommonFields.Player player)
         {
             if (player.Elite == 0) return GetProfessionRender(player);
-            if (!EliteRenderRepository.Any(x => x.Key.Equals((int) player.Elite)))
-            {
-                var render = new AsyncTexture2D();
-                try
-                {
-                    EliteRenderRepository.Add((int) player.Elite, render);
-                }
-                catch (ArgumentException e)
-                {
-                    Logger.Warn(e.Message + e.StackTrace);
-                }
-            }
-
             return EliteRenderRepository[(int) player.Elite];
         }
-
         private AsyncTexture2D GetTokenRender(int key)
         {
             return TokenRenderRepository[key];
