@@ -200,12 +200,12 @@ namespace KillProofModule
 
         protected override async Task LoadAsync()
         {
-            await Task.Run(LoadResources);
-            await Task.Run(LoadProfessionIcons);
-            await Task.Run(LoadEliteIcons);
+            await LoadResources();
+            await LoadProfessionIcons();
+            await LoadEliteIcons();
         }
 
-        private async void LoadResources()
+        private async Task LoadResources()
         {
             await GetJsonResponse<Resources>(KILLPROOF_API_URL + "resources?lang=" + GameService.Overlay.UserLocale.Value)
                 .ContinueWith(async result =>
@@ -223,7 +223,7 @@ namespace KillProofModule
                     } else {
                         _resources = result.Result.Item2;
                     }
-                    await Task.Run(LoadTokenIcons);
+                    await LoadTokenIcons();
                 });
         }
         protected override void OnModuleLoaded(EventArgs e)
@@ -319,7 +319,7 @@ namespace KillProofModule
 
         #region Render Getters
 
-        private async void LoadTokenIcons()
+        private async Task LoadTokenIcons()
         {
             var tokenRenderUrlRepository = _resources.GetAllTokens();
             foreach (var token in tokenRenderUrlRepository)
@@ -354,7 +354,7 @@ namespace KillProofModule
                 .Cast<ProfessionType>());
         }
 
-        private async void LoadProfessionIcons()
+        private async Task LoadProfessionIcons()
         {
             var professions = await LoadProfessions();
             foreach (var profession in professions)
@@ -385,7 +385,7 @@ namespace KillProofModule
             }
         }
 
-        private async void LoadEliteIcons()
+        private async Task LoadEliteIcons()
         {
             var ids = await Gw2ApiManager.Gw2ApiClient.V2.Specializations.IdsAsync();
             var specializations = await Gw2ApiManager.Gw2ApiClient.V2.Specializations.ManyAsync(ids);
