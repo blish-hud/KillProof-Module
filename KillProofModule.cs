@@ -151,7 +151,7 @@ namespace KillProofModule
             SORTBY_FRACTAL = Properties.Resources.Fractal_Titles;
             CurrentSortMethod = SORTBY_ALL;
 
-            LoadResources();
+            Task.Run(async delegate { await LoadResources(); });
 
             _killProofQuickMenu?.Dispose();
             if (_killProofQuickMenuEnabled.Value && _myKillProof != null)
@@ -327,23 +327,21 @@ namespace KillProofModule
                 TokenRenderRepository.Add(token.Id, new AsyncTexture2D());
 
                 var renderUri = token.Icon;
-                try
-                {
-                    var textureDataResponse =
-                        await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
-
-                    using (var textureStream = new MemoryStream(textureDataResponse))
+                await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri)
+                    .ContinueWith(textureDataResponse =>
                     {
-                        var loadedTexture =
-                            Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
+                        if (textureDataResponse.Exception != null) {
+                            Logger.Warn(textureDataResponse.Exception, $"Request to render service for {renderUri} failed.");
+                            return;
+                        }
+                        using (var textureStream = new MemoryStream(textureDataResponse.Result))
+                        {
+                            var loadedTexture =
+                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
 
-                        TokenRenderRepository[token.Id].SwapTexture(loadedTexture);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
-                }
+                            TokenRenderRepository[token.Id].SwapTexture(loadedTexture);
+                        }
+                    });
             }
         }
         private async Task<IReadOnlyList<Profession>> LoadProfessions()
@@ -362,23 +360,21 @@ namespace KillProofModule
                 ProfessionRenderRepository.Add(id, new AsyncTexture2D());
 
                 var renderUri = (string) profession.IconBig;
-                try
-                {
-                    var textureDataResponse =
-                        await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
-
-                    using (var textureStream = new MemoryStream(textureDataResponse))
+                await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri)
+                    .ContinueWith(textureDataResponse =>
                     {
-                        var loadedTexture =
-                            Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
+                        if (textureDataResponse.Exception != null) {
+                            Logger.Warn(textureDataResponse.Exception, $"Request to render service for {renderUri} failed.");
+                            return;
+                        }
+                        using (var textureStream = new MemoryStream(textureDataResponse.Result))
+                        {
+                            var loadedTexture =
+                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
 
-                        ProfessionRenderRepository[id].SwapTexture(loadedTexture);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
-                }
+                            ProfessionRenderRepository[id].SwapTexture(loadedTexture);
+                        }
+                    });
             }
         }
         private async Task LoadEliteIcons()
@@ -392,24 +388,22 @@ namespace KillProofModule
                 EliteRenderRepository.Add(specialization.Id, new AsyncTexture2D());
 
                 var renderUri = (string) specialization.ProfessionIconBig;
-                try
-                {
-                    var textureDataResponse =
-                        await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
-
-                    using (var textureStream = new MemoryStream(textureDataResponse))
+                await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri)
+                    .ContinueWith(textureDataResponse =>
                     {
-                        var loadedTexture =
-                            Texture2D.FromStream(GameService.Graphics.GraphicsDevice,
-                                textureStream);
+                        if (textureDataResponse.Exception != null) {
+                            Logger.Warn(textureDataResponse.Exception, $"Request to render service for {renderUri} failed.");
+                            return;
+                        }
+                        using (var textureStream = new MemoryStream(textureDataResponse.Result))
+                        {
+                            var loadedTexture =
+                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice,
+                                    textureStream);
 
-                        EliteRenderRepository[specialization.Id].SwapTexture(loadedTexture);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
-                }
+                            EliteRenderRepository[specialization.Id].SwapTexture(loadedTexture);
+                        }
+                    });
             }
         }
 
@@ -688,13 +682,15 @@ namespace KillProofModule
 
                 clearButton.Click += delegate
                 {
-                    foreach (var c in _displayedPlayers.Where(c => c != null)
-                        .Where(c
-                            => !GameService.ArcDps.Common.PlayersInSquad.Any(p
-                                => p.Value.AccountName.Equals(c.Player.AccountName))))
+                    foreach (var c in _displayedPlayers.ToArray())
                     {
-                        _displayedPlayers.Remove(c);
-                        c.Dispose();
+                        if (c == null)
+                            _displayedPlayers.Remove(null);
+                        else if (!GameService.ArcDps.Common.PlayersInSquad.Any(p => p.Value.AccountName.Equals(c.Player.AccountName)))
+                        {
+                            _displayedPlayers.Remove(c);
+                            c.Dispose();
+                        }
                     }
 
                 };
@@ -1297,7 +1293,7 @@ namespace KillProofModule
                 if (randomizeButton.BackgroundColor == Color.LightGreen)
                 {
                     var cooldown = DateTimeOffset.Now.Subtract(cooldownSend);
-                    if (cooldown.TotalSeconds < 2) {
+                    if (cooldown.TotalSeconds < 1) {
                         ScreenNotification.ShowNotification("Your total has been reached. Cooling down.", ScreenNotification.NotificationType.Error);
                         return;
                     }
@@ -1347,7 +1343,7 @@ namespace KillProofModule
                 else
                 {
                     var cooldown = DateTimeOffset.Now.Subtract(cooldownSend);
-                    if (cooldown.TotalSeconds < 2) {
+                    if (cooldown.TotalSeconds < 1) {
                         ScreenNotification.ShowNotification("Your total has been reached. Cooling down.", ScreenNotification.NotificationType.Error);
                         return;
                     }
