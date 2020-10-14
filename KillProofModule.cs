@@ -324,27 +324,25 @@ namespace KillProofModule
             var tokenRenderUrlRepository = _resources.GetAllTokens();
             foreach (var token in tokenRenderUrlRepository)
             {
+                TokenRenderRepository.Add(token.Id, new AsyncTexture2D());
                 var renderUri = token.Icon;
-                if (TokenRenderRepository.Any(x => x.Key == token.Id))
-                    try
-                    {
-                        var textureDataResponse =
-                            await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
+                try
+                {
+                    var textureDataResponse =
+                        await Gw2ApiManager.Gw2ApiClient.Render.DownloadToByteArrayAsync(renderUri);
 
-                        using (var textureStream = new MemoryStream(textureDataResponse))
-                        {
-                            var loadedTexture =
-                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
-
-                            TokenRenderRepository[token.Id].SwapTexture(loadedTexture);
-                        }
-                    }
-                    catch (Exception ex)
+                    using (var textureStream = new MemoryStream(textureDataResponse))
                     {
-                        Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                        var loadedTexture =
+                            Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
+
+                        TokenRenderRepository[token.Id].SwapTexture(loadedTexture);
                     }
-                else
-                    TokenRenderRepository.Add(token.Id, GameService.Content.GetRenderServiceTexture(renderUri));
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn(ex, $"Request to render service for {renderUri} failed.", renderUri);
+                }
             }
         }
 
@@ -454,19 +452,6 @@ namespace KillProofModule
 
         private AsyncTexture2D GetTokenRender(int key)
         {
-            if (TokenRenderRepository.All(x => x.Key != key))
-            {
-                var render = new AsyncTexture2D();
-                try
-                {
-                    TokenRenderRepository.Add(key, render);
-                }
-                catch (ArgumentException e)
-                {
-                    Logger.Warn(e.Message + e.StackTrace);
-                }
-            }
-
             return TokenRenderRepository[key];
         }
 
