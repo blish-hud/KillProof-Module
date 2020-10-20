@@ -50,6 +50,8 @@ namespace KillProofModule
         private WindowTab _killProofTab;
         private Panel _modulePanel;
         private PlayerButton _localPlayerButton;
+        private EventHandler<MouseEventArgs> _localPlayerButtonDelegate;
+
         private KillProof _myKillProof;
 
         private Resources _resources;
@@ -464,11 +466,13 @@ namespace KillProofModule
                 _localPlayerButton.BasicTooltipText = "";
                 _localPlayerButton.Player = player;
                 _localPlayerButton.Icon = GetEliteRender(player);
-                _localPlayerButton.LeftMouseButtonPressed += delegate
+                _localPlayerButton.Click -= _localPlayerButtonDelegate;
+                _localPlayerButtonDelegate = delegate
                 {
                     GameService.Overlay.BlishHudWindow.Navigate(
                         BuildKillProofPanel(GameService.Overlay.BlishHudWindow, player));
                 };
+                _localPlayerButton.Click += _localPlayerButtonDelegate;
                 if (_myKillProof == null) LoadMyKillProof();
                 return;
             }
@@ -492,7 +496,7 @@ namespace KillProofModule
                     Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
                         ContentService.FontSize.Size16, ContentService.FontStyle.Regular)
                 };
-                playerButton.LeftMouseButtonPressed += delegate
+                playerButton.Click += delegate
                 {
                     playerButton.IsNew = false;
                     GameService.Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(GameService.Overlay.BlishHudWindow,
