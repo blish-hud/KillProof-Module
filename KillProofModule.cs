@@ -37,7 +37,7 @@ namespace KillProofModule
 
         private const string KILLPROOF_API_URL = "https://killproof.me/api/";
 
-        private static readonly Logger Logger = Logger.GetLogger(typeof(KillProofModule));
+        internal static readonly Logger Logger = Logger.GetLogger(typeof(KillProofModule));
 
         internal static KillProofModule ModuleInstance;
 
@@ -209,7 +209,7 @@ namespace KillProofModule
 
         private async Task LoadResources()
         {
-            await GetJsonResponse<Resources>(KILLPROOF_API_URL + "resources?lang=" + GameService.Overlay.UserLocale.Value)
+            await TaskUtil.GetJsonResponse<Resources>(KILLPROOF_API_URL + "resources?lang=" + GameService.Overlay.UserLocale.Value)
                 .ContinueWith(async result =>
                 {
                     if (!result.IsCompleted || !result.Result.Item1)
@@ -245,34 +245,6 @@ namespace KillProofModule
             if (_killProofQuickMenu != null)
                 _killProofQuickMenu.Visible = GameService.GameIntegration.IsInGame &&
                                               GameService.ArcDps.Common.PlayersInSquad.Count != 0;
-        }
-
-        private async Task<(bool, T)> GetJsonResponse<T>(string request)
-        {
-            try
-            {
-                var rawJson = await request.AllowHttpStatus(HttpStatusCode.NotFound).GetStringAsync();
-
-                return (true, JsonConvert.DeserializeObject<T>(rawJson));
-            }
-            catch (FlurlHttpTimeoutException ex)
-            {
-                Logger.Warn(ex, $"Request '{request}' timed out.");
-            }
-            catch (FlurlHttpException ex)
-            {
-                Logger.Warn(ex, $"Request '{request}' was not successful.");
-            }
-            catch (JsonReaderException ex)
-            {
-                Logger.Warn(ex, $"Failed to read JSON response returned by request '{request}' which returned ''");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, $"Unexpected error while requesting '{request}'.");
-            }
-
-            return (false, default);
         }
 
         /// <inheritdoc />
@@ -431,7 +403,7 @@ namespace KillProofModule
                 return _cachedKillProofs.FirstOrDefault(x =>
                     x.AccountName.Equals(account, StringComparison.InvariantCultureIgnoreCase));
 
-            var (responseSuccess, killProof) = await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value)
+            var (responseSuccess, killProof) = await TaskUtil.GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value)
                 .ConfigureAwait(false);
 
             if (responseSuccess && killProof?.Error == null)
@@ -447,7 +419,7 @@ namespace KillProofModule
         private async Task<bool> ProfileAvailable(string account)
         {
             var (responseSuccess, optionalKillProof) =
-                await GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value);
+                await TaskUtil.GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value);
 
             return responseSuccess && optionalKillProof?.Error == null;
         }
@@ -1314,7 +1286,6 @@ namespace KillProofModule
                         return;
                     }
 
-                    var reductionTimes = totalAmount / 250;
                     cooldown = DateTimeOffset.Now.Subtract(hotButtonTimeSend);
 
                     if (cooldown.TotalMilliseconds > 500) 
@@ -1323,7 +1294,8 @@ namespace KillProofModule
                         currentValue = 0;
                     }
 
-                    if (reduction < reductionTimes)
+                    var rest = totalAmount - (currentValue % totalAmount);
+                    if (rest > 250)
                     {
 
                         var tempAmount = 250 - reduction;
@@ -1336,7 +1308,7 @@ namespace KillProofModule
 
                     } else {
 
-                        chatLink.Quantity = Convert.ToByte(totalAmount % currentValue);
+                        chatLink.Quantity = Convert.ToByte(rest);
                         reduction = 0;
                         currentValue = 0;
                         cooldownSend = DateTimeOffset.Now;
@@ -1361,7 +1333,6 @@ namespace KillProofModule
                         return;
                     }
 
-                    var reductionTimes = totalAmount / 250;
                     cooldown = DateTimeOffset.Now.Subtract(hotButtonTimeSend);
 
                     if (cooldown.TotalMilliseconds > 500) 
@@ -1370,7 +1341,8 @@ namespace KillProofModule
                         currentValue = 0;
                     }
 
-                    if (reduction < reductionTimes)
+                    var rest = totalAmount - (currentValue % totalAmount);
+                    if (rest > 250)
                     {
                         var tempAmount = 250 - reduction;
                         if (RandomUtil.GetRandom(0, 10) > 4) 
@@ -1382,7 +1354,7 @@ namespace KillProofModule
 
                     } else {
 
-                        chatLink.Quantity = Convert.ToByte(totalAmount % currentValue);
+                        chatLink.Quantity = Convert.ToByte(rest);
                         reduction = 0;
                         currentValue = 0;
                         cooldownSend = DateTimeOffset.Now;
