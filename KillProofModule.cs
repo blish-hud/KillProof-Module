@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Blish_HUD;
+﻿using Blish_HUD;
 using Blish_HUD.ArcDps.Common;
 using Blish_HUD.Content;
 using Blish_HUD.Controls;
@@ -14,7 +6,6 @@ using Blish_HUD.Input;
 using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
-using Flurl.Http;
 using Gw2Sharp.ChatLinks;
 using Gw2Sharp.Models;
 using Gw2Sharp.WebApi.V2.Models;
@@ -23,6 +14,14 @@ using KillProofModule.Persistance;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using static Blish_HUD.GameService;
 using Color = Microsoft.Xna.Framework.Color;
 
 namespace KillProofModule
@@ -30,6 +29,22 @@ namespace KillProofModule
     [Export(typeof(Module))]
     public class KillProofModule : Module
     {
+        internal static readonly Logger Logger = Logger.GetLogger(typeof(KillProofModule));
+
+        internal static KillProofModule ModuleInstance;
+
+        [ImportingConstructor]
+        public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters) { ModuleInstance = this; }
+
+        protected override void DefineSettings(SettingCollection settings)
+        {
+            var selfManagedSettings = settings.AddSubCollection("Managed Settings", false, false);
+            SmartPingMenuEnabled = selfManagedSettings.DefineSetting("KillProofQuickMenuEnabled", false);
+            AutomaticClearEnabled = selfManagedSettings.DefineSetting("AutomaticClearEnabled", false);
+        }
+
+        #region Constants
+
         private const int TOP_MARGIN = 0;
         private const int RIGHT_MARGIN = 5;
         private const int BOTTOM_MARGIN = 10;
@@ -37,54 +52,37 @@ namespace KillProofModule
 
         private const string KILLPROOF_API_URL = "https://killproof.me/api/";
 
-        internal static readonly Logger Logger = Logger.GetLogger(typeof(KillProofModule));
+        #endregion
 
-        internal static KillProofModule ModuleInstance;
+        #region Textures
 
-        private List<PlayerButton> _displayedPlayers;
-        private Panel _killProofQuickMenu;
-
-        private SettingEntry<bool> _killProofQuickMenuEnabled;
-        private SettingEntry<bool> _automaticClearEnabled;
-
-        private WindowTab _killProofTab;
-        private Panel _modulePanel;
-        private PlayerButton _localPlayerButton;
-        private EventHandler<MouseEventArgs> _localPlayerButtonDelegate;
-
-        private KillProof _myKillProof;
-
-        private Resources _resources;
-        private Checkbox _smartPingCheckBox;
-
-        private Panel _squadPanel;
-        private string CurrentSortMethod;
-        private readonly Point LABEL_BIG = new Point(400, 40);
-        private readonly Point LABEL_SMALL = new Point(400, 30);
-
-        // Caches
         private Dictionary<int, AsyncTexture2D> ProfessionRenderRepository;
         private Dictionary<int, AsyncTexture2D> EliteRenderRepository;
         private Dictionary<int, AsyncTexture2D> TokenRenderRepository;
 
-        private List<KillProof> _cachedKillProofs;
-        private KillProof _currentProfile;
+        #endregion
+
+        #region Controls
+
+        private List<PlayerButton> _displayedPlayers;
+        private Panel _smartPingMenu;
+        private WindowTab _killProofTab;
+        private Panel _modulePanel;
+        private PlayerButton _localPlayerButton;
         private List<KillProofButton> _displayedKillProofs;
+        private Panel _squadPanel;
 
-        [ImportingConstructor]
-        public KillProofModule([Import("ModuleParameters")] ModuleParameters moduleParameters) : base(moduleParameters)
-        {
-            ModuleInstance = this;
-        }
+        #endregion
 
-        protected override void DefineSettings(SettingCollection settings)
-        {
-            var selfManagedSettings = settings.AddSubCollection("Managed Settings", false, false);
-            _killProofQuickMenuEnabled = selfManagedSettings.DefineSetting("KillProofQuickMenuEnabled", false);
-            _automaticClearEnabled = selfManagedSettings.DefineSetting("AutomaticClearEnabled", false);
-        }
+        #region Settings
+
+        private SettingEntry<bool> SmartPingMenuEnabled;
+        private SettingEntry<bool> AutomaticClearEnabled;
+
+        #endregion
 
         #region Localization
+
         private string KillProofTabName = "KillProof";
 
         private string SORTBY_ALL;
@@ -155,19 +153,57 @@ namespace KillProofModule
 
             Task.Run(async delegate { await LoadResources(); });
 
-            _killProofQuickMenu?.Dispose();
-            if (_killProofQuickMenuEnabled.Value && _myKillProof != null)
-                _killProofQuickMenu = BuildKillProofQuickMenu();
+            BuildSmartPingMenu();
 
             _modulePanel?.Dispose();
-            _modulePanel = BuildHomePanel(GameService.Overlay.BlishHudWindow);
+            _modulePanel = BuildHomePanel(Overlay.BlishHudWindow);
 
             if (_killProofTab != null)
-                GameService.Overlay.BlishHudWindow.RemoveTab(_killProofTab);
+                Overlay.BlishHudWindow.RemoveTab(_killProofTab);
 
-            _killProofTab = GameService.Overlay.BlishHudWindow.AddTab(KillProofTabName, _killProofIconTexture, _modulePanel, 0);
+            _killProofTab = Overlay.BlishHudWindow.AddTab(KillProofTabName, _killProofIconTexture, _modulePanel, 0);
         }
+
         #endregion
+
+        #region Persistance
+
+        private Resources _resources;
+        private KillProof _myKillProof;
+        private List<KillProof> _cachedKillProofs;
+        private KillProof _currentProfile;
+
+        #endregion
+
+        #region Delegates
+
+        private EventHandler<MouseEventArgs> _localPlayerButtonDelegate;
+
+        #endregion
+        
+        private readonly Regex Gw2AccountName = new Regex(@"[^a-zA-Z0-9.\s]|^\.*$", RegexOptions.Compiled);
+
+        private readonly Point LABEL_BIG = new Point(400, 40);
+        private readonly Point LABEL_SMALL = new Point(400, 30);
+        private string CurrentSortMethod;
+
+        private DateTimeOffset _smartPingCooldownSend = DateTimeOffset.Now;
+        private DateTimeOffset _smartPingHotButtonTimeSend = DateTimeOffset.Now;
+        private int _smartPingCurrentReduction = 0;
+        private int _smartPingCurrentValue = 0;
+
+        protected override void Initialize()
+        {
+            TokenRenderRepository = new Dictionary<int, AsyncTexture2D>();
+            EliteRenderRepository = new Dictionary<int, AsyncTexture2D>();
+            ProfessionRenderRepository = new Dictionary<int, AsyncTexture2D>();
+            _displayedKillProofs = new List<KillProofButton>();
+            _displayedPlayers = new List<PlayerButton>();
+            _cachedKillProofs = new List<KillProof>();
+
+            LoadTextures();
+        }
+
 
         private void LoadTextures()
         {
@@ -185,20 +221,6 @@ namespace KillProofModule
             _notificationBackroundTexture = ContentsManager.GetTexture("ns-button.png");
         }
 
-        protected override void Initialize()
-        {
-            TokenRenderRepository = new Dictionary<int, AsyncTexture2D>();
-            EliteRenderRepository = new Dictionary<int, AsyncTexture2D>();
-            ProfessionRenderRepository = new Dictionary<int, AsyncTexture2D>();
-            _displayedKillProofs = new List<KillProofButton>();
-            _displayedPlayers = new List<PlayerButton>();
-            _cachedKillProofs = new List<KillProof>();
-
-            LoadTextures();
-            GameService.Overlay.UserLocaleChanged += ChangeLocalization;
-
-            GameService.ArcDps.Common.Activate();
-        }
 
         protected override async Task LoadAsync()
         {
@@ -207,9 +229,10 @@ namespace KillProofModule
             await LoadEliteIcons();
         }
 
+
         private async Task LoadResources()
         {
-            await TaskUtil.GetJsonResponse<Resources>(KILLPROOF_API_URL + "resources?lang=" + GameService.Overlay.UserLocale.Value)
+            await TaskUtil.GetJsonResponse<Resources>(KILLPROOF_API_URL + "resources?lang=" + Overlay.UserLocale.Value)
                 .ContinueWith(async result =>
                 {
                     if (!result.IsCompleted || !result.Result.Item1)
@@ -228,37 +251,100 @@ namespace KillProofModule
                     await LoadTokenIcons();
                 });
         }
+
+
         protected override void OnModuleLoaded(EventArgs e)
         {
             ChangeLocalization(null, null);
-            GameService.ArcDps.Common.PlayerAdded += PlayerAddedEvent;
-            GameService.ArcDps.Common.PlayerRemoved += PlayerLeavesEvent;
+
+            Overlay.UserLocaleChanged += ChangeLocalization;
+
+            SmartPingMenuEnabled.SettingChanged += OnSmartPingMenuEnabledSettingChanged;
+
+            ArcDps.Common.Activate();
+            ArcDps.Common.PlayerAdded += PlayerAddedEvent;
+            ArcDps.Common.PlayerRemoved += PlayerLeavesEvent;
+
+            GameIntegration.IsInGameChanged += OnIsInGameChanged;
+            Gw2Mumble.UI.IsMapOpenChanged += OnIsMapOpenChanged;
 
             // Base handler must be called
             base.OnModuleLoaded(e);
         }
 
-        protected override void Update(GameTime gameTime)
-        {
-            if (_localPlayerButton != null) _localPlayerButton.Parent.Visible = GameService.ArcDps.RenderPresent;
-            if (_smartPingCheckBox != null) _smartPingCheckBox.Visible = GameService.ArcDps.RenderPresent;
-            if (_killProofQuickMenu != null)
-                _killProofQuickMenu.Visible = GameService.GameIntegration.IsInGame &&
-                                              GameService.ArcDps.Common.PlayersInSquad.Count != 0;
+
+        private void DoSmartPing(Token token) {
+
+            var chatLink = new ItemChatLink();
+            chatLink.ItemId = token.Id;
+
+            var totalAmount = _myKillProof.GetToken(token.Id)?.Amount ?? 0;
+            if (totalAmount <= 250) {
+                chatLink.Quantity = Convert.ToByte(totalAmount);
+                GameIntegration.Chat.Send(chatLink.ToString());
+                return;
+            }
+
+            var hotButtonCooldownTime  = DateTimeOffset.Now.Subtract(_smartPingHotButtonTimeSend);
+            if (hotButtonCooldownTime.TotalMilliseconds > 500) 
+            {
+                _smartPingCurrentReduction = 0;
+                _smartPingCurrentValue = 0;
+            }
+
+            var rest = totalAmount - (_smartPingCurrentValue % totalAmount);
+            if (rest > 250)
+            {
+                var tempAmount = 250 - _smartPingCurrentReduction;
+                if (RandomUtil.GetRandom(0, 10) > 5) 
+                {
+                    _smartPingCurrentValue += tempAmount;
+                    _smartPingCurrentReduction++;
+                }
+                chatLink.Quantity = Convert.ToByte(tempAmount);
+
+            } else {
+
+                chatLink.Quantity = Convert.ToByte(rest);
+                _smartPingCurrentReduction = 0;
+                _smartPingCurrentValue = 0;
+                _smartPingCooldownSend = DateTimeOffset.Now;
+            }
+            GameIntegration.Chat.Send(chatLink.ToString());
+            _smartPingHotButtonTimeSend = DateTimeOffset.Now;
+        }
+
+
+        private bool IsUiAvailable() => Gw2Mumble.IsAvailable && GameIntegration.IsInGame && !Gw2Mumble.UI.IsMapOpen;
+
+        private void OnIsMapOpenChanged(object o, ValueEventArgs<bool> e) => ToggleSmartPingMenu(!e.Value, 0.45f);
+        private void OnIsInGameChanged(object o, ValueEventArgs<bool> e) => ToggleSmartPingMenu(e.Value, 0.1f);
+        private void OnSmartPingMenuEnabledSettingChanged(object o, ValueChangedEventArgs<bool> e) => ToggleSmartPingMenu(e.NewValue, 0.1f);
+
+        private void ToggleSmartPingMenu(bool enabled, float tDuration) {
+            if (enabled)
+                BuildSmartPingMenu();
+            else if (_smartPingMenu != null)
+                Animation.Tweener.Tween(_smartPingMenu, new {Opacity = 0.0f}, tDuration).OnComplete(() => _smartPingMenu?.Dispose());
         }
 
         /// <inheritdoc />
         protected override void Unload()
         {
-            GameService.Overlay.UserLocaleChanged -= ChangeLocalization;
-            GameService.ArcDps.Common.PlayerAdded -= PlayerAddedEvent;
-            GameService.ArcDps.Common.PlayerRemoved -= PlayerLeavesEvent;
-            _killProofQuickMenu?.Dispose();
+            SmartPingMenuEnabled.SettingChanged -= OnSmartPingMenuEnabledSettingChanged;
+            Overlay.UserLocaleChanged -= ChangeLocalization;
+            ArcDps.Common.PlayerAdded -= PlayerAddedEvent;
+            ArcDps.Common.PlayerRemoved -= PlayerLeavesEvent;
+            Gw2Mumble.UI.IsMapOpenChanged -= OnIsMapOpenChanged;
+            GameIntegration.IsInGameChanged -= OnIsInGameChanged;
+            _smartPingMenu?.Dispose();
             _squadPanel?.Dispose();
             _localPlayerButton?.Dispose();
+
             foreach (var c in _displayedKillProofs) c?.Dispose();
+
             _displayedPlayers.Clear();
-            GameService.Overlay.BlishHudWindow.RemoveTab(_killProofTab);
+            Overlay.BlishHudWindow.RemoveTab(_killProofTab);
             // All static members must be manually unset
             ModuleInstance = null;
         }
@@ -311,18 +397,21 @@ namespace KillProofModule
                         using (var textureStream = new MemoryStream(textureDataResponse.Result))
                         {
                             var loadedTexture =
-                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
+                                Texture2D.FromStream(Graphics.GraphicsDevice, textureStream);
 
                             TokenRenderRepository[token.Id].SwapTexture(loadedTexture);
                         }
                     });
             }
         }
+
+
         private async Task<IReadOnlyList<Profession>> LoadProfessions()
         {
-            return await Gw2ApiManager.Gw2ApiClient.V2.Professions.ManyAsync(Enum.GetValues(typeof(ProfessionType))
-                .Cast<ProfessionType>());
+            return await Gw2ApiManager.Gw2ApiClient.V2.Professions.ManyAsync(Enum.GetValues(typeof(ProfessionType)).Cast<ProfessionType>());
         }
+
+
         private async Task LoadProfessionIcons()
         {
             var professions = await LoadProfessions();
@@ -344,13 +433,15 @@ namespace KillProofModule
                         using (var textureStream = new MemoryStream(textureDataResponse.Result))
                         {
                             var loadedTexture =
-                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice, textureStream);
+                                Texture2D.FromStream(Graphics.GraphicsDevice, textureStream);
 
                             ProfessionRenderRepository[id].SwapTexture(loadedTexture);
                         }
                     });
             }
         }
+
+
         private async Task LoadEliteIcons()
         {
             var ids = await Gw2ApiManager.Gw2ApiClient.V2.Specializations.IdsAsync();
@@ -372,8 +463,7 @@ namespace KillProofModule
                         using (var textureStream = new MemoryStream(textureDataResponse.Result))
                         {
                             var loadedTexture =
-                                Texture2D.FromStream(GameService.Graphics.GraphicsDevice,
-                                    textureStream);
+                                Texture2D.FromStream(Graphics.GraphicsDevice, textureStream);
 
                             EliteRenderRepository[specialization.Id].SwapTexture(loadedTexture);
                         }
@@ -403,7 +493,7 @@ namespace KillProofModule
                 return _cachedKillProofs.FirstOrDefault(x =>
                     x.AccountName.Equals(account, StringComparison.InvariantCultureIgnoreCase));
 
-            var (responseSuccess, killProof) = await TaskUtil.GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value)
+            var (responseSuccess, killProof) = await TaskUtil.GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + Overlay.UserLocale.Value)
                 .ConfigureAwait(false);
 
             if (responseSuccess && killProof?.Error == null)
@@ -416,23 +506,38 @@ namespace KillProofModule
 
         #region Panel Related Stuff
 
+        private async void LoadMyKillProof()
+        {
+            if (_myKillProof != null) return;
+            var player = ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
+            await GetKillProofContent(player.AccountName).ContinueWith((result) =>
+            {
+                if (!result.IsCompleted) return;
+                _myKillProof = result.Result;
+                BuildSmartPingMenu();
+            });
+        }
+
+
         private async Task<bool> ProfileAvailable(string account)
         {
             var (responseSuccess, optionalKillProof) =
-                await TaskUtil.GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + GameService.Overlay.UserLocale.Value);
+                await TaskUtil.GetJsonResponse<KillProof>(KILLPROOF_API_URL + $"kp/{account}?lang=" + Overlay.UserLocale.Value);
 
             return responseSuccess && optionalKillProof?.Error == null;
         }
 
+
         private void PlayerLeavesEvent(CommonFields.Player player)
         {
-            if (!_automaticClearEnabled.Value) return;
+            if (!AutomaticClearEnabled.Value) return;
             var profileBtn = _displayedPlayers.FirstOrDefault(x => x.Player.AccountName.Equals(player.AccountName));
             _displayedPlayers.Remove(profileBtn);
             profileBtn?.Dispose();
         }
-        private void PlayerAddedEvent(CommonFields.Player player)
-        {
+
+
+        private void PlayerAddedEvent(CommonFields.Player player) {
             if (player.Self && _localPlayerButton != null)
             {
                 _localPlayerButton.BasicTooltipText = "";
@@ -441,45 +546,39 @@ namespace KillProofModule
                 _localPlayerButton.Click -= _localPlayerButtonDelegate;
                 _localPlayerButtonDelegate = delegate
                 {
-                    GameService.Overlay.BlishHudWindow.Navigate(
-                        BuildKillProofPanel(GameService.Overlay.BlishHudWindow, player));
+                    Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(Overlay.BlishHudWindow, player));
                 };
                 _localPlayerButton.Click += _localPlayerButtonDelegate;
-                if (_myKillProof == null) LoadMyKillProof();
+                LoadMyKillProof();
                 return;
             }
 
-            if (_displayedPlayers.Any(x =>
-                    x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase))
-                || !ProfileAvailable(player.AccountName).Result) return;
+            if (_displayedPlayers.Any(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase)) || !ProfileAvailable(player.AccountName).Result) return;
 
             PlayerNotification.ShowNotification(player.AccountName, GetEliteRender(player), NotificationProfileAvailable, 10);
 
-            var optionalButton = _displayedPlayers.FirstOrDefault(x =>
-                x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase));
+            var optionalButton = _displayedPlayers.FirstOrDefault(x => x.Player.AccountName.Equals(player.AccountName, StringComparison.InvariantCultureIgnoreCase));
 
-            if (optionalButton == null)
-            {
+            if (optionalButton == null) {
                 var playerButton = new PlayerButton
                 {
                     Parent = _squadPanel,
                     Player = player,
                     Icon = GetEliteRender(player),
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                        ContentService.FontSize.Size16, ContentService.FontStyle.Regular)
+                    Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular)
                 };
                 playerButton.Click += delegate
                 {
                     playerButton.IsNew = false;
-                    GameService.Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(GameService.Overlay.BlishHudWindow,
-                        playerButton.Player));
+                    Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(Overlay.BlishHudWindow, playerButton.Player));
                 };
                 _displayedPlayers.Add(playerButton);
-            }
-            else
-            {
+
+            } else {
+
                 optionalButton.Player = player;
                 optionalButton.Icon = GetEliteRender(player);
+
             }
 
             RepositionPlayers();
@@ -527,18 +626,15 @@ namespace KillProofModule
             };
             tbAccountName.EnterPressed += delegate
             {
-                if (!string.Equals(tbAccountName.Text, "") &&
-                    !Regex.IsMatch(tbAccountName.Text, @"[^a-zA-Z0-9.\s]|^\.*$"))
-                    wndw.Navigate(BuildKillProofPanel(wndw,
-                        new CommonFields.Player(null, tbAccountName.Text, 0, 0, false)));
+                if (!string.Equals(tbAccountName.Text, "") && Gw2AccountName.IsMatch(tbAccountName.Text))
+                    wndw.Navigate(BuildKillProofPanel(wndw, new CommonFields.Player(null, tbAccountName.Text, 0, 0, false)));
                 tbAccountName.Focused = false;
             };
             var labSquadPanel = new Label
             {
                 Parent = header,
                 Size = new Point(300, 40),
-                Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24,
-                    ContentService.FontStyle.Regular),
+                Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
                 StrokeText = true,
                 Location = new Point(LEFT_MARGIN, header.Bottom - 40),
                 Text = RecentProfileText
@@ -581,8 +677,8 @@ namespace KillProofModule
             };
 
             // Features only available when ArcDps is installed.
-            if (GameService.ArcDps.Loaded)
-            { 
+            if (ArcDps.Loaded)
+            {
                 var selfButtonPanel = new Panel
                 {
                     Parent = header,
@@ -593,41 +689,28 @@ namespace KillProofModule
                         new Point(header.Right - 335 - RIGHT_MARGIN, TOP_MARGIN + 15)
                 };
 
-
-                _smartPingCheckBox = new Checkbox
+                var _smartPingCheckBox = new Checkbox
                 {
                     Parent = header,
                     Location = new Point(selfButtonPanel.Location.X + LEFT_MARGIN, selfButtonPanel.Bottom),
                     Size = new Point(selfButtonPanel.Width, 30),
                     Text = SmartPingMenuToggleCheckboxText,
                     BasicTooltipText = SmartPingMenuCheckboxTooltip,
-                    Checked = _killProofQuickMenuEnabled.Value
+                    Checked = SmartPingMenuEnabled.Value
                 };
 
-
-                _smartPingCheckBox.CheckedChanged += delegate(object sender, CheckChangedEvent e)
-                {
-                    _killProofQuickMenuEnabled.Value = e.Checked;
-                    if (e.Checked && _myKillProof != null)
-                        _killProofQuickMenu = BuildKillProofQuickMenu();
-                    else
-                        _killProofQuickMenu?.Dispose();
-                };
-
+                _smartPingCheckBox.CheckedChanged += delegate(object o, CheckChangedEvent e) { SmartPingMenuEnabled.Value = e.Checked; };
 
                 _localPlayerButton = new PlayerButton
                 {
                     Parent = selfButtonPanel,
                     Player = new CommonFields.Player(StartedBlishHUDWhileGw2AlreadyRunning,RefreshMapToSeeYourProfile, 0, 0, true),
-                    Icon = GameService.Content.GetTexture("common/733268"),
+                    Icon = Content.GetTexture("common/733268"),
                     IsNew = false,
                     Location = new Point(0, 0),
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                        ContentService.FontSize.Size16,
-                        ContentService.FontStyle.Regular),
+                    Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                     BasicTooltipText = RefreshMapToSeeYourProfile
                 };
-
 
                 var clearButton = new StandardButton()
                 {
@@ -638,7 +721,6 @@ namespace KillProofModule
                     BasicTooltipText = ClearButtonTooltipText
                 };
 
-
                 var clearCheckbox = new Checkbox()
                 {
                     Parent = hPanel,
@@ -646,15 +728,13 @@ namespace KillProofModule
                     Location = new Point(clearButton.Location.X - 20 - RIGHT_MARGIN, clearButton.Location.Y),
                     Text = "",
                     BasicTooltipText = ClearCheckboxTooltipText,
-                    Checked = _automaticClearEnabled.Value
+                    Checked = AutomaticClearEnabled.Value
                 };
-
 
                 clearCheckbox.CheckedChanged += delegate(object o, CheckChangedEvent e) 
                 {
-                    _automaticClearEnabled.Value = e.Checked;
+                    AutomaticClearEnabled.Value = e.Checked;
                 };
-
 
                 clearButton.Click += delegate
                 {
@@ -662,18 +742,17 @@ namespace KillProofModule
                     {
                         if (c == null)
                             _displayedPlayers.Remove(null);
-                        else if (!GameService.ArcDps.Common.PlayersInSquad.Any(p => p.Value.AccountName.Equals(c.Player.AccountName)))
+                        else if (!ArcDps.Common.PlayersInSquad.Any(p => p.Value.AccountName.Equals(c.Player.AccountName)))
                         {
                             _displayedPlayers.Remove(c);
                             c.Dispose();
                         }
                     }
-
                 };
             }
-
             return hPanel;
         }
+
 
         private void MousePressedSortButton(object sender, MouseEventArgs e)
         {
@@ -681,11 +760,13 @@ namespace KillProofModule
             bSortMethod.Size = new Point(bSortMethod.Size.X - 4, bSortMethod.Size.Y - 4);
         }
 
+
         private void MouseLeftSortButton(object sender, MouseEventArgs e)
         {
             var bSortMethod = (Control) sender;
             bSortMethod.Size = new Point(32, 32);
         }
+
 
         private void FinishLoadingKillProofPanel(WindowBase wndw, Panel hPanel, CommonFields.Player player, KillProof currentAccount)
         {
@@ -707,8 +788,7 @@ namespace KillProofModule
                     Size = LABEL_BIG,
                     Location = new Point(LEFT_MARGIN, 100 - BOTTOM_MARGIN),
                     ShowShadow = true,
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                        ContentService.FontSize.Size36, ContentService.FontStyle.Regular),
+                    Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size36, ContentService.FontStyle.Regular),
                     Text = ""
                 };
                 var currentAccountLastRefresh = new Label
@@ -730,7 +810,7 @@ namespace KillProofModule
                     Parent = sortingsMenu,
                     Size = new Point(32, 32),
                     Location = new Point(RIGHT_MARGIN, 0),
-                    Texture = GameService.Content.GetTexture("255369"),
+                    Texture = Content.GetTexture("255369"),
                     BackgroundColor = Color.Transparent,
                     BasicTooltipText = SORTBY_ALL
                 };
@@ -817,7 +897,7 @@ namespace KillProofModule
                     Size = LABEL_SMALL,
                     HorizontalAlignment = HorizontalAlignment.Left,
                     Location = new Point(LEFT_MARGIN, footer.Height / 2 - LABEL_SMALL.Y / 2),
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size11,
+                    Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size11,
                         ContentService.FontStyle.Regular),
                     Text = ""
                 };
@@ -827,7 +907,7 @@ namespace KillProofModule
                     Size = LABEL_SMALL,
                     HorizontalAlignment = HorizontalAlignment.Left,
                     Location = new Point(LEFT_MARGIN, currentAccountKpId.Location.Y + BOTTOM_MARGIN + 2),
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size11,
+                    Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size11,
                         ContentService.FontStyle.Regular),
                     Text = ""
                 };
@@ -854,8 +934,7 @@ namespace KillProofModule
                     ShowTint = true
                 };
                 currentAccountName.Text = currentAccount.AccountName;
-                currentAccountLastRefresh.Text =
-                    LastRefreshText + $" {currentAccount.LastRefresh:dddd, d. MMMM yyyy - HH:mm:ss}";
+                currentAccountLastRefresh.Text = LastRefreshText + $" {currentAccount.LastRefresh:dddd, d. MMMM yyyy - HH:mm:ss}";
                 currentAccountKpId.Text = KpIdText + ' ' + currentAccount.KpId;
                 currentAccountProofUrl.Text = currentAccount.ProofUrl;
 
@@ -867,7 +946,7 @@ namespace KillProofModule
                         {
                             Parent = contentPanel,
                             Icon = GetTokenRender(killproof.Id),
-                            Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
+                            Font = Content.GetFont(ContentService.FontFace.Menomonia,
                                 ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                             Text = killproof.Name,
                             BottomText = killproof.Amount.ToString()
@@ -889,7 +968,7 @@ namespace KillProofModule
                         {
                             Parent = contentPanel,
                             Icon = GetTokenRender(token.Id),
-                            Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
+                            Font = Content.GetFont(ContentService.FontFace.Menomonia,
                                 ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                             Text = token.Name,
                             BottomText = token.Amount.ToString()
@@ -908,7 +987,7 @@ namespace KillProofModule
                         var titleButton = new KillProofButton
                         {
                             Parent = contentPanel,
-                            Font = GameService.Content.DefaultFont16,
+                            Font = Content.DefaultFont16,
                             Text = title.Name,
                             BottomText = title.Mode.ToString(),
                             IsTitleDisplay = true
@@ -940,15 +1019,14 @@ namespace KillProofModule
                     {
                         Parent = _squadPanel,
                         Player = newPlayer,
-                        Icon = GameService.Content.GetTexture("common/733268"),
-                        Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
+                        Icon = Content.GetTexture("common/733268"),
+                        Font = Content.GetFont(ContentService.FontFace.Menomonia,
                             ContentService.FontSize.Size16, ContentService.FontStyle.Regular),
                         IsNew = false
                     };
                     playerButton.LeftMouseButtonPressed += delegate
                     {
-                        GameService.Overlay.BlishHudWindow.Navigate(
-                            BuildKillProofPanel(GameService.Overlay.BlishHudWindow, player));
+                        Overlay.BlishHudWindow.Navigate(BuildKillProofPanel(Overlay.BlishHudWindow, player));
                     };
                     _displayedPlayers.Add(playerButton);
                 }
@@ -970,8 +1048,7 @@ namespace KillProofModule
                     Location = new Point(0, -20),
                     ShowShadow = true,
                     StrokeText = true,
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                        ContentService.FontSize.Size36, ContentService.FontStyle.Regular),
+                    Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size36, ContentService.FontStyle.Regular),
                     Text = NotYetRegisteredText,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Middle
@@ -983,8 +1060,7 @@ namespace KillProofModule
                     Location = new Point(0, -20),
                     ShowShadow = true,
                     StrokeText = true,
-                    Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia,
-                        ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
+                    Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size24, ContentService.FontStyle.Regular),
                     Text = "\n\n" + VisitUsAndHelpText,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Middle
@@ -1008,13 +1084,14 @@ namespace KillProofModule
             backButton.LeftMouseButtonReleased += delegate
             {
                 wndw.NavigateHome();
-                wndw.ActivePanel = GameService.Overlay.BlishHudWindow.Panels[_killProofTab];
+                wndw.ActivePanel = Overlay.BlishHudWindow.Panels[_killProofTab];
                 RepositionPlayers();
                 hPanel.Dispose();
             };
 
             _currentProfile = currentAccount;
         }
+
 
         public Panel BuildKillProofPanel(WindowBase wndw, CommonFields.Player player)
         {
@@ -1029,8 +1106,7 @@ namespace KillProofModule
                 Parent = hPanel
             };
 
-            pageLoading.Location = new Point(hPanel.Size.X / 2 - pageLoading.Size.X / 2,
-                hPanel.Size.Y / 2 - pageLoading.Size.Y / 2);
+            pageLoading.Location = new Point(hPanel.Size.X / 2 - pageLoading.Size.X / 2, hPanel.Size.Y / 2 - pageLoading.Size.Y / 2);
 
             foreach (var e1 in _displayedKillProofs) e1.Dispose();
             _displayedKillProofs.Clear();
@@ -1043,6 +1119,7 @@ namespace KillProofModule
 
             return hPanel;
         }
+
 
         private void UpdateSort(object sender, EventArgs e)
         {
@@ -1084,6 +1161,7 @@ namespace KillProofModule
             RepositionKillProofs();
         }
 
+
         private void RepositionKillProofs()
         {
             var pos = 0;
@@ -1098,6 +1176,7 @@ namespace KillProofModule
                 if (e.Visible) pos++;
             }
         }
+
 
         private void RepositionPlayers()
         {
@@ -1118,38 +1197,31 @@ namespace KillProofModule
             }
         }
 
-        private async void LoadMyKillProof()
+
+        private void BuildSmartPingMenu()
         {
-            var player = GameService.ArcDps.Common.PlayersInSquad.First(x => x.Value.Self).Value;
-            await GetKillProofContent(player.AccountName).ContinueWith((result) =>
+            _smartPingMenu?.Dispose();
+
+            if (!SmartPingMenuEnabled.Value || !IsUiAvailable() || _myKillProof == null) return;
+
+            _smartPingMenu = new Panel
             {
-                if (!result.IsCompleted) return;
-                _myKillProof = result.Result;
-                if (_killProofQuickMenuEnabled.Value) _killProofQuickMenu = BuildKillProofQuickMenu();
-            });
-        }
-        private Panel BuildKillProofQuickMenu()
-        {
-            var bgPanel = new Panel
-            {
-                Parent = GameService.Graphics.SpriteScreen,
+                Parent = Graphics.SpriteScreen,
                 Location = new Point(10, 38),
                 Size = new Point(400, 40),
-                Opacity = 0.4f,
-                Visible = false,
+                Opacity = 0.0f,
                 ShowBorder = true
             };
-            bgPanel.Resized += delegate { bgPanel.Location = new Point(10, 38); };
-            bgPanel.MouseEntered += delegate
-            {
-                GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 1.0f}, 0.45f);
-            };
+
+            _smartPingMenu.Resized += delegate { _smartPingMenu.Location = new Point(10, 38); };
+
+            _smartPingMenu.MouseEntered += delegate { Animation.Tweener.Tween(_smartPingMenu, new {Opacity = 1.0f}, 0.45f); };
+
             var leftBracket = new Label
             {
-                Parent = bgPanel,
-                Size = bgPanel.Size,
-                Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size20,
-                    ContentService.FontStyle.Regular),
+                Parent = _smartPingMenu,
+                Size = _smartPingMenu.Size,
+                Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size20, ContentService.FontStyle.Regular),
                 Text = "[",
                 Location = new Point(0, 0),
                 HorizontalAlignment = HorizontalAlignment.Left,
@@ -1157,28 +1229,27 @@ namespace KillProofModule
             };
             var quantity = new Label
             {
-                Parent = bgPanel,
+                Parent = _smartPingMenu,
                 Size = new Point(30, 30),
                 Location = new Point(10, -2)
             };
             var dropdown = new Dropdown
             {
-                Parent = bgPanel,
+                Parent = _smartPingMenu,
                 Size = new Point(260, 20),
                 Location = new Point(quantity.Right + 2, 3),
                 SelectedItem = LoadingLabel
             };
-            bgPanel.MouseLeft += delegate
+            _smartPingMenu.MouseLeft += delegate
             {
                 //TODO: Check for when dropdown IsExpanded
-                GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 0.4f}, 0.45f);
+                Animation.Tweener.Tween(_smartPingMenu, new {Opacity = 0.4f}, 0.45f);
             };
             var rightBracket = new Label
             {
-                Parent = bgPanel,
-                Size = new Point(10, bgPanel.Height),
-                Font = GameService.Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size20,
-                    ContentService.FontStyle.Regular),
+                Parent = _smartPingMenu,
+                Size = new Point(10, _smartPingMenu.Height),
+                Font = Content.GetFont(ContentService.FontFace.Menomonia, ContentService.FontSize.Size20, ContentService.FontStyle.Regular),
                 Text = "]",
                 Location = new Point(dropdown.Right, 0),
                 HorizontalAlignment = HorizontalAlignment.Left,
@@ -1204,16 +1275,16 @@ namespace KillProofModule
             dropdown.SelectedItem = dropdown.Items[0];
             var sendButton = new Image
             {
-                Parent = bgPanel,
+                Parent = _smartPingMenu,
                 Size = new Point(24, 24),
                 Location = new Point(rightBracket.Right + 1, 0),
-                Texture = GameService.Content.GetTexture("784268"),
+                Texture = Content.GetTexture("784268"),
                 SpriteEffects = SpriteEffects.FlipHorizontally,
                 BasicTooltipText = SmartPingMenuSendButtonTooltip
             };
             var randomizeButton = new StandardButton
             {
-                Parent = bgPanel,
+                Parent = _smartPingMenu,
                 Size = new Point(29, 24),
                 Location = new Point(sendButton.Right + 7, 0),
                 Text = "W1",
@@ -1253,122 +1324,45 @@ namespace KillProofModule
                 sendButton.Size = new Point(22, 22);
                 sendButton.Location = new Point(rightBracket.Right + 3, 2);
             };
-            var cooldownSend = DateTimeOffset.Now;
-            var hotButtonTimeSend = DateTimeOffset.Now;
-            var reduction = 0;
-            var currentValue = 0;
+
             sendButton.LeftMouseButtonReleased += delegate
             {
                 sendButton.Size = new Point(24, 24);
                 sendButton.Location = new Point(rightBracket.Right + 1, 0);
 
-                if (_myKillProof == null) return;
+                if (Gw2Mumble.UI.IsTextInputFocused) return;
 
-                var chatLink = new ItemChatLink();
+                var cooldown = DateTimeOffset.Now.Subtract(_smartPingCooldownSend);
+                if (cooldown.TotalSeconds < 1) {
+                    ScreenNotification.ShowNotification("Your total has been reached. Cooling down.", ScreenNotification.NotificationType.Error);
+                    return;
+                }
 
                 if (randomizeButton.BackgroundColor == Color.LightGreen)
                 {
-                    var cooldown = DateTimeOffset.Now.Subtract(cooldownSend);
-                    if (cooldown.TotalSeconds < 1) {
-                        ScreenNotification.ShowNotification("Your total has been reached. Cooling down.", ScreenNotification.NotificationType.Error);
-                        return;
-                    }
                     var wing = _resources.GetWing(randomizeButton.Text);
                     var wingTokens = wing.GetTokens();
                     var tokenSelection = _myKillProof.GetAllTokens().Where(x => wingTokens.Any(y => y.Id.Equals(x.Id))).ToList();
                     if (tokenSelection.Count == 0) return;
-                    var singleRandomToken = tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1));
-                    chatLink.ItemId = singleRandomToken.Id;
-                    var totalAmount = _myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0;
-                    if (totalAmount <= 250) {
-                        chatLink.Quantity = Convert.ToByte(totalAmount);
-                        GameService.GameIntegration.Chat.Send(chatLink.ToString());
-                        return;
-                    }
 
-                    cooldown = DateTimeOffset.Now.Subtract(hotButtonTimeSend);
+                    DoSmartPing(tokenSelection.ElementAt(RandomUtil.GetRandom(0, tokenSelection.Count - 1)));
 
-                    if (cooldown.TotalMilliseconds > 500) 
-                    {
-                        reduction = 0;
-                        currentValue = 0;
-                    }
+                } else {
 
-                    var rest = totalAmount - (currentValue % totalAmount);
-                    if (rest > 250)
-                    {
-
-                        var tempAmount = 250 - reduction;
-                        if (RandomUtil.GetRandom(0, 10) > 4) 
-                        {
-                            currentValue += tempAmount;
-                            reduction++;
-                        }
-                        chatLink.Quantity = Convert.ToByte(tempAmount);
-
-                    } else {
-
-                        chatLink.Quantity = Convert.ToByte(rest);
-                        reduction = 0;
-                        currentValue = 0;
-                        cooldownSend = DateTimeOffset.Now;
-                    }
-                    GameService.GameIntegration.Chat.Send(chatLink.ToString());
-                    hotButtonTimeSend = DateTimeOffset.Now;
-                }
-                else
-                {
-                    var cooldown = DateTimeOffset.Now.Subtract(cooldownSend);
-                    if (cooldown.TotalSeconds < 1) {
-                        ScreenNotification.ShowNotification("Your total has been reached. Cooling down.", ScreenNotification.NotificationType.Error);
-                        return;
-                    }
                     var token = _myKillProof.GetToken(dropdown.SelectedItem);
                     if (token == null) return;
-                    chatLink.ItemId = token.Id;
-                    var totalAmount = token.Amount;
-                    if (totalAmount <= 250) {
-                        chatLink.Quantity = Convert.ToByte(totalAmount);
-                        GameService.GameIntegration.Chat.Send(chatLink.ToString());
-                        return;
-                    }
-
-                    cooldown = DateTimeOffset.Now.Subtract(hotButtonTimeSend);
-
-                    if (cooldown.TotalMilliseconds > 500) 
-                    {
-                        reduction = 0;
-                        currentValue = 0;
-                    }
-
-                    var rest = totalAmount - (currentValue % totalAmount);
-                    if (rest > 250)
-                    {
-                        var tempAmount = 250 - reduction;
-                        if (RandomUtil.GetRandom(0, 10) > 4) 
-                        {
-                            currentValue += tempAmount;
-                            reduction++;
-                        }
-                        chatLink.Quantity = Convert.ToByte(tempAmount);
-
-                    } else {
-
-                        chatLink.Quantity = Convert.ToByte(rest);
-                        reduction = 0;
-                        currentValue = 0;
-                        cooldownSend = DateTimeOffset.Now;
-                    }
-                    GameService.GameIntegration.Chat.Send(chatLink.ToString());
-                    hotButtonTimeSend = DateTimeOffset.Now;
+                    DoSmartPing(token);
                 }
             };
+
             sendButton.RightMouseButtonPressed += delegate
             {
                 sendButton.Size = new Point(22, 22);
                 sendButton.Location = new Point(rightBracket.Right + 3, 2);
             };
+
             var timeOutRightSend = new Dictionary<int, DateTimeOffset>();
+
             sendButton.RightMouseButtonReleased += delegate
             {
                 sendButton.Size = new Point(24, 24);
@@ -1403,18 +1397,15 @@ namespace KillProofModule
                         }
 
                         timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
-                    }
-                    else
-                    {
+                    } else {
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
                     }
 
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameService.GameIntegration.Chat.Send(
-                        $"Total: {_myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0} of {chatLink} (killproof.me/{_myKillProof.KpId})");
-                }
-                else
-                {
+                    GameIntegration.Chat.Send($"Total: {_myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0} of {chatLink} (killproof.me/{_myKillProof.KpId})");
+
+                } else {
+
                     var token = _myKillProof.GetToken(dropdown.SelectedItem);
                     if (token == null) return;
                     chatLink.ItemId = token.Id;
@@ -1435,24 +1426,22 @@ namespace KillProofModule
                         }
 
                         timeOutRightSend[chatLink.ItemId] = DateTimeOffset.Now;
-                    }
-                    else
-                    {
+
+                    } else {
+
                         timeOutRightSend.Add(chatLink.ItemId, DateTimeOffset.Now);
+
                     }
+
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameService.GameIntegration.Chat.Send(SmartPingMenuRightclickSendMessage.Replace("{0}", token.Amount.ToString())
-                                                                                            .Replace("{1}", chatLink.ToString())
-                                                                                            .Replace("{2}", _myKillProof.KpId));
+                    GameIntegration.Chat.Send(SmartPingMenuRightclickSendMessage.Replace("{0}", token.Amount.ToString()).Replace("{1}", chatLink.ToString()).Replace("{2}", _myKillProof.KpId));
                 }
             };
-            bgPanel.Disposed += delegate { GameService.Animation.Tweener.Tween(bgPanel, new {Opacity = 0.0f}, 0.2f); };
-            bgPanel.PropertyChanged += delegate
-            {
-                if (!bgPanel.Visible || _myKillProof == null) return;
-                quantity.Text = _myKillProof.GetToken(dropdown.SelectedItem)?.Amount.ToString() ?? "0";
-            };
-            return bgPanel;
+            _smartPingMenu.Disposed += delegate { Animation.Tweener.Tween(_smartPingMenu, new {Opacity = 0.0f}, 0.2f); };
+            quantity.Text = _myKillProof.GetToken(dropdown.SelectedItem)?.Amount.ToString() ?? "0";
+
+            Animation.Tweener.Tween(_smartPingMenu, new {Opacity = 0.4f}, 0.35f);
+            return;
         }
 
         #endregion
