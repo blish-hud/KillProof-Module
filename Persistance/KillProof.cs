@@ -46,7 +46,9 @@ namespace KillProofModule.Persistance
         }
         public IEnumerable<Token> GetAllTokens()
         {
-            return Killproofs?.Concat(Tokens ?? Enumerable.Empty<Token>()) ?? Enumerable.Empty<Token>();
+            var tokens = Tokens ?? Enumerable.Empty<Token>();
+            var killproofs = Killproofs ?? Enumerable.Empty<Token>();
+            return tokens.Concat(killproofs);
         }
     }
 }
