@@ -16,6 +16,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
@@ -39,8 +40,11 @@ namespace KillProofModule
         protected override void DefineSettings(SettingCollection settings)
         {
             var selfManagedSettings = settings.AddSubCollection("Managed Settings", false, false);
-            SmartPingMenuEnabled = selfManagedSettings.DefineSetting("KillProofQuickMenuEnabled", false);
+            SmartPingMenuEnabled = selfManagedSettings.DefineSetting("SmartPingMenuEnabled", false);
             AutomaticClearEnabled = selfManagedSettings.DefineSetting("AutomaticClearEnabled", false);
+
+            SPM_DropdownSelection = selfManagedSettings.DefineSetting("SmartPingMenuDropdownSelection", "");
+            SPM_WingSelection = selfManagedSettings.DefineSetting("SmartPingMenuWingSelection", "W1");
         }
 
         #region Constants
@@ -78,7 +82,8 @@ namespace KillProofModule
 
         private SettingEntry<bool> SmartPingMenuEnabled;
         private SettingEntry<bool> AutomaticClearEnabled;
-
+        private SettingEntry<string> SPM_DropdownSelection;
+        private SettingEntry<string> SPM_WingSelection;
         #endregion
 
         #region Localization
@@ -1268,11 +1273,16 @@ namespace KillProofModule
             foreach (var tokenString in tokenStringSorted) {
                 dropdown.Items.Add(tokenString);
             }
-            dropdown.ValueChanged += delegate
+
+            dropdown.ValueChanged += delegate (object o, ValueChangedEventArgs e)
             {
-                quantity.Text = _myKillProof?.GetToken(dropdown.SelectedItem)?.Amount.ToString() ?? "0";
+                quantity.Text = _myKillProof?.GetToken(e.CurrentValue)?.Amount.ToString() ?? "";
+                SPM_DropdownSelection.Value = e.CurrentValue;
             };
-            dropdown.SelectedItem = dropdown.Items[0];
+
+            var oldSelection = dropdown.Items.FirstOrDefault(x => x.Equals(SPM_DropdownSelection.Value, StringComparison.InvariantCultureIgnoreCase));
+            dropdown.SelectedItem = oldSelection ?? (dropdown.Items.Count > 0 ? dropdown.Items[0] : "");
+
             var sendButton = new Image
             {
                 Parent = _smartPingMenu,
@@ -1287,10 +1297,16 @@ namespace KillProofModule
                 Parent = _smartPingMenu,
                 Size = new Point(29, 24),
                 Location = new Point(sendButton.Right + 7, 0),
-                Text = "W1",
+                Text = SPM_WingSelection.Value,
                 BackgroundColor = Color.Gray,
                 BasicTooltipText = SmartPingMenuRandomizeButtonTooltip
             };
+
+            randomizeButton.PropertyChanged += delegate (object o, PropertyChangedEventArgs e) {
+                if (!e.PropertyName.Equals(nameof(StandardButton.Text))) return;
+                SPM_WingSelection.Value = randomizeButton.Text;
+            };
+
             randomizeButton.LeftMouseButtonPressed += delegate
             {
                 randomizeButton.Size = new Point(27, 22);
