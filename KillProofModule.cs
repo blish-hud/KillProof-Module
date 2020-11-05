@@ -301,7 +301,7 @@ namespace KillProofModule
             if (rest > 250)
             {
                 var tempAmount = 250 - _smartPingCurrentReduction;
-                if (RandomUtil.GetRandom(0, 10) > 5) 
+                if (RandomUtil.GetRandom(0, 10) > 4)
                 {
                     _smartPingCurrentValue += tempAmount;
                     _smartPingCurrentReduction++;
