@@ -283,7 +283,7 @@ namespace KillProofModule
             var chatLink = new ItemChatLink();
             chatLink.ItemId = token.Id;
 
-            var totalAmount = _myKillProof.GetToken(token.Id)?.Amount ?? 0;
+            var totalAmount = _myKillProof?.GetToken(token.Id)?.Amount ?? 0;
             if (totalAmount <= 250) {
                 chatLink.Quantity = Convert.ToByte(totalAmount);
                 GameIntegration.Chat.Send(chatLink.ToString());
@@ -291,21 +291,20 @@ namespace KillProofModule
             }
 
             var hotButtonCooldownTime  = DateTimeOffset.Now.Subtract(_smartPingHotButtonTimeSend);
-            if (hotButtonCooldownTime.TotalMilliseconds > 500) 
-            {
+            if (hotButtonCooldownTime.TotalMilliseconds > 500) {
                 _smartPingCurrentReduction = 0;
                 _smartPingCurrentValue = 0;
             }
 
             var rest = totalAmount - (_smartPingCurrentValue % totalAmount);
-            if (rest > 250)
-            {
+            if (rest > 250) {
+
                 var tempAmount = 250 - _smartPingCurrentReduction;
-                if (RandomUtil.GetRandom(0, 10) > 4)
-                {
+                if (RandomUtil.GetRandom(0, 10) > 6) {
                     _smartPingCurrentValue += tempAmount;
                     _smartPingCurrentReduction++;
                 }
+
                 chatLink.Quantity = Convert.ToByte(tempAmount);
 
             } else {
@@ -314,7 +313,9 @@ namespace KillProofModule
                 _smartPingCurrentReduction = 0;
                 _smartPingCurrentValue = 0;
                 _smartPingCooldownSend = DateTimeOffset.Now;
+
             }
+
             GameIntegration.Chat.Send(chatLink.ToString());
             _smartPingHotButtonTimeSend = DateTimeOffset.Now;
         }
