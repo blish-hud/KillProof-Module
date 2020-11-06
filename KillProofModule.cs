@@ -306,6 +306,7 @@ namespace KillProofModule
             if (rest > 250) {
 
                 var tempAmount = 250 - _smartPingCurrentReduction;
+
                 if (_smartPingCurrentRepetitions < SPM_Repetitions.Value) {
                     _smartPingCurrentRepetitions++;
                 } else {
@@ -313,11 +314,13 @@ namespace KillProofModule
                     _smartPingCurrentReduction++;
                     _smartPingCurrentRepetitions = 0;
                 }
+
                 chatLink.Quantity = Convert.ToByte(tempAmount);
 
             } else {
 
                 chatLink.Quantity = Convert.ToByte(rest);
+
                 if (_smartPingCurrentRepetitions < SPM_Repetitions.Value) {
                     _smartPingCurrentRepetitions++;
                 } else {
