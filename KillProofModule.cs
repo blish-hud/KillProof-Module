@@ -39,6 +39,8 @@ namespace KillProofModule
 
         protected override void DefineSettings(SettingCollection settings)
         {
+            SPM_Repetitions = settings.DefineSetting("SmartPingRepetitions", 1, "Smart Ping Repetitions", "Indicates how often a value should be repeated before proceeding to the next reduction.");
+
             var selfManagedSettings = settings.AddSubCollection("Managed Settings", false, false);
             SmartPingMenuEnabled = selfManagedSettings.DefineSetting("SmartPingMenuEnabled", false);
             AutomaticClearEnabled = selfManagedSettings.DefineSetting("AutomaticClearEnabled", false);
@@ -84,6 +86,8 @@ namespace KillProofModule
         private SettingEntry<bool> AutomaticClearEnabled;
         private SettingEntry<string> SPM_DropdownSelection;
         private SettingEntry<string> SPM_WingSelection;
+        private SettingEntry<int> SPM_Repetitions;
+
         #endregion
 
         #region Localization
@@ -196,6 +200,7 @@ namespace KillProofModule
         private DateTimeOffset _smartPingHotButtonTimeSend = DateTimeOffset.Now;
         private int _smartPingCurrentReduction = 0;
         private int _smartPingCurrentValue = 0;
+        private int _smartPingCurrentRepetitions = 0;
 
         protected override void Initialize()
         {
@@ -294,15 +299,20 @@ namespace KillProofModule
             if (hotButtonCooldownTime.TotalMilliseconds > 500) {
                 _smartPingCurrentReduction = 0;
                 _smartPingCurrentValue = 0;
+                _smartPingCurrentRepetitions = 0;
             }
 
             var rest = totalAmount - (_smartPingCurrentValue % totalAmount);
             if (rest > 250) {
 
                 var tempAmount = 250 - _smartPingCurrentReduction;
-                if (RandomUtil.GetRandom(0, 10) > 6) {
+
+                if (_smartPingCurrentRepetitions < SPM_Repetitions.Value) {
+                    _smartPingCurrentRepetitions++;
+                } else {
                     _smartPingCurrentValue += tempAmount;
                     _smartPingCurrentReduction++;
+                    _smartPingCurrentRepetitions = 0;
                 }
 
                 chatLink.Quantity = Convert.ToByte(tempAmount);
@@ -310,16 +320,20 @@ namespace KillProofModule
             } else {
 
                 chatLink.Quantity = Convert.ToByte(rest);
-                _smartPingCurrentReduction = 0;
-                _smartPingCurrentValue = 0;
-                _smartPingCooldownSend = DateTimeOffset.Now;
 
+                if (_smartPingCurrentRepetitions < SPM_Repetitions.Value) {
+                    _smartPingCurrentRepetitions++;
+                } else {
+                    _smartPingCurrentReduction = 0;
+                    _smartPingCurrentValue = 0;
+                    _smartPingCurrentRepetitions = 0;
+                    _smartPingCooldownSend = DateTimeOffset.Now;
+                }
             }
 
             GameIntegration.Chat.Send(chatLink.ToString());
             _smartPingHotButtonTimeSend = DateTimeOffset.Now;
         }
-
 
         private bool IsUiAvailable() => Gw2Mumble.IsAvailable && GameIntegration.IsInGame && !Gw2Mumble.UI.IsMapOpen;
 
