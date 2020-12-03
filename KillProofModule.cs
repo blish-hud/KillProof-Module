@@ -190,7 +190,7 @@ namespace KillProofModule
 
         #endregion
         
-        private readonly Regex Gw2AccountName = new Regex(@"[^a-zA-Z0-9.\s]|^\.*$", RegexOptions.Compiled);
+        private readonly Regex Gw2AccountName = new Regex(@"\w+\.\d+", RegexOptions.Singleline | RegexOptions.Compiled);
 
         private readonly Point LABEL_BIG = new Point(400, 40);
         private readonly Point LABEL_SMALL = new Point(400, 30);
@@ -1104,7 +1104,7 @@ namespace KillProofModule
             backButton.LeftMouseButtonReleased += delegate
             {
                 wndw.NavigateHome();
-                wndw.ActivePanel = Overlay.BlishHudWindow.Panels[_killProofTab];
+                wndw.Navigate(_modulePanel);
                 RepositionPlayers();
                 hPanel.Dispose();
             };
