@@ -190,7 +190,7 @@ namespace KillProofModule
 
         #endregion
         
-        private readonly Regex Gw2AccountName = new Regex(@"\w+\.\d+", RegexOptions.Singleline | RegexOptions.Compiled);
+        private readonly Regex Gw2AccountName = new Regex(@".{3,32}", RegexOptions.Singleline | RegexOptions.Compiled);
 
         private readonly Point LABEL_BIG = new Point(400, 40);
         private readonly Point LABEL_SMALL = new Point(400, 30);
