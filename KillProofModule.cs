@@ -39,7 +39,7 @@ namespace KillProofModule
 
         protected override void DefineSettings(SettingCollection settings)
         {
-            SPM_Repetitions = settings.DefineSetting("SmartPingRepetitions", 1, "Smart Ping Repetitions", "Indicates how often a value should be repeated before proceeding to the next reduction.");
+            SPM_Repetitions = settings.DefineSetting("SmartPingRepetitions", 10, "Smart Ping Repetitions", "Indicates how often a value should be repeated before proceeding to the next reduction.");
 
             var selfManagedSettings = settings.AddSubCollection("Managed Settings", false, false);
             SmartPingMenuEnabled = selfManagedSettings.DefineSetting("SmartPingMenuEnabled", false);
@@ -198,6 +198,7 @@ namespace KillProofModule
 
         private DateTimeOffset _smartPingCooldownSend = DateTimeOffset.Now;
         private DateTimeOffset _smartPingHotButtonTimeSend = DateTimeOffset.Now;
+        private int _smartPingRepetitions;
         private int _smartPingCurrentReduction = 0;
         private int _smartPingCurrentValue = 0;
         private int _smartPingCurrentRepetitions = 0;
@@ -214,6 +215,9 @@ namespace KillProofModule
             LoadTextures();
         }
 
+        private void OnSPM_RepetitionsChanged(object o, ValueChangedEventArgs<int> e) {
+            _smartPingRepetitions = MathHelper.Clamp(e.NewValue, 10, 100) / 10;
+        }
 
         private void LoadTextures()
         {
@@ -271,6 +275,10 @@ namespace KillProofModule
 
             SmartPingMenuEnabled.SettingChanged += OnSmartPingMenuEnabledSettingChanged;
 
+            OnSPM_RepetitionsChanged(SPM_Repetitions, new ValueChangedEventArgs<int>(0, SPM_Repetitions.Value));
+            SPM_Repetitions.SettingChanged += OnSPM_RepetitionsChanged;
+            
+
             ArcDps.Common.Activate();
             ArcDps.Common.PlayerAdded += PlayerAddedEvent;
             ArcDps.Common.PlayerRemoved += PlayerLeavesEvent;
@@ -307,7 +315,7 @@ namespace KillProofModule
 
                 var tempAmount = 250 - _smartPingCurrentReduction;
 
-                if (_smartPingCurrentRepetitions < SPM_Repetitions.Value) {
+                if (_smartPingCurrentRepetitions < _smartPingRepetitions) {
                     _smartPingCurrentRepetitions++;
                 } else {
                     _smartPingCurrentValue += tempAmount;
@@ -321,7 +329,7 @@ namespace KillProofModule
 
                 chatLink.Quantity = Convert.ToByte(rest);
 
-                if (_smartPingCurrentRepetitions < SPM_Repetitions.Value) {
+                if (_smartPingCurrentRepetitions < _smartPingRepetitions) {
                     _smartPingCurrentRepetitions++;
                 } else {
                     _smartPingCurrentReduction = 0;
@@ -352,6 +360,7 @@ namespace KillProofModule
         protected override void Unload()
         {
             SmartPingMenuEnabled.SettingChanged -= OnSmartPingMenuEnabledSettingChanged;
+            SPM_Repetitions.SettingChanged -= OnSPM_RepetitionsChanged;
             Overlay.UserLocaleChanged -= ChangeLocalization;
             ArcDps.Common.PlayerAdded -= PlayerAddedEvent;
             ArcDps.Common.PlayerRemoved -= PlayerLeavesEvent;
@@ -957,7 +966,15 @@ namespace KillProofModule
                 currentAccountLastRefresh.Text = LastRefreshText + $" {currentAccount.LastRefresh:dddd, d. MMMM yyyy - HH:mm:ss}";
                 currentAccountKpId.Text = KpIdText + ' ' + currentAccount.KpId;
                 currentAccountProofUrl.Text = currentAccount.ProofUrl;
-
+                if (Uri.IsWellFormedUriString(currentAccount.ProofUrl, UriKind.Absolute)) {
+                    currentAccountProofUrl.MouseEntered += (o, e) => currentAccountProofUrl.TextColor = Color.LightBlue;
+                    currentAccountProofUrl.MouseLeft += (o, e) => currentAccountProofUrl.TextColor = Color.White;
+                    currentAccountProofUrl.LeftMouseButtonPressed += (o, e) => currentAccountProofUrl.TextColor = new Color(206, 174, 250);
+                    currentAccountProofUrl.LeftMouseButtonReleased += (o, e) => {
+                        currentAccountProofUrl.TextColor = Color.LightBlue;
+                        System.Diagnostics.Process.Start(currentAccount.ProofUrl);
+                    };
+                }
                 if (currentAccount.Killproofs != null)
                 {
                     foreach (var killproof in currentAccount.Killproofs)
