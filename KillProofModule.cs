@@ -1450,7 +1450,7 @@ namespace KillProofModule
                     }
 
                     chatLink.Quantity = Convert.ToByte(1);
-                    GameIntegration.Chat.Send($"Total: {_myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0} of {chatLink} (killproof.me/{_myKillProof.KpId})");
+                    GameIntegration.Chat.Send($"Total: {_myKillProof.GetToken(singleRandomToken.Id)?.Amount ?? 0} of {chatLink} (killproof.me/proof/{_myKillProof.KpId})");
 
                 } else {
 
